@@ -1,106 +1,48 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { getUserChats, markMessagesAsRead } from "../services/api"
-import { io } from "socket.io-client"
+import { useState, useEffect } from "react";
+import { getUserChats, markMessagesAsRead } from "../services/api";
 
 const ChatList = ({ currentUser, onSelectChat, selectedChatId }) => {
-  const [chats, setChats] = useState([])
-  const [socket, setSocket] = useState(null)
-  const [onlineUsers, setOnlineUsers] = useState(new Set())
-  const [loading, setLoading] = useState(true)
+  const [chats, setChats] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_API_URL, {
-      transports: ["polling", "websocket"], // Allow polling as fallback
-      upgrade: true, // Allow transport upgrade
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 20000, // Increase timeout
-    })
-    setSocket(newSocket)
-    newSocket.emit("user_connected", currentUser._id)
-    return () => newSocket.disconnect()
-  }, [currentUser._id])
-
+  // Fetch chats initially and set up polling
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        setLoading(true)
-        const response = await getUserChats(currentUser._id)
-        const validChats = (response || []).filter((chat) => chat.participant && chat.participant._id)
-        setChats(validChats)
-        setLoading(false)
+        setLoading(true);
+        const response = await getUserChats(currentUser._id);
+        const validChats = (response || []).filter((chat) => chat.participant && chat.participant._id);
+        setChats(validChats);
+        setLoading(false);
       } catch (error) {
-        console.error("Error fetching chats:", error)
-        setChats([])
-        setLoading(false)
+        console.error("Error fetching chats:", error);
+        setChats([]);
+        setLoading(false);
       }
+    };
+
+    if (currentUser._id) {
+      fetchChats(); // Initial fetch
+      // Poll every 10 seconds to check for new messages
+      const interval = setInterval(fetchChats, 10000);
+      return () => clearInterval(interval);
     }
-    if (currentUser._id) fetchChats()
-  }, [currentUser._id])
+  }, [currentUser._id]);
 
-  useEffect(() => {
-    if (!socket) return
-
-    socket.on("user_status", ({ userId, status }) => {
-      setOnlineUsers((prev) => {
-        const newSet = new Set(prev)
-        status === "online" ? newSet.add(userId) : newSet.delete(userId)
-        return newSet
-      })
-    })
-
-    socket.on("receive_message", (data) => {
-      setChats((prev) => {
-        const chatIndex = prev.findIndex((chat) => chat.chatId === data.chatId)
-        if (chatIndex !== -1) {
-          const updatedChats = [...prev]
-          updatedChats[chatIndex] = {
-            ...updatedChats[chatIndex],
-            lastMessage: data.message,
-            unreadCount:
-              data.message.sender !== currentUser._id
-                ? updatedChats[chatIndex].unreadCount + 1
-                : updatedChats[chatIndex].unreadCount,
-            updatedAt: new Date().toISOString(),
-          }
-          return updatedChats.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
-        }
-        return prev
-      })
-    })
-
-    socket.on("messages_read", ({ chatId, readBy }) => {
-      if (readBy !== currentUser._id) {
-        setChats((prev) =>
-          prev.map((chat) =>
-            chat.chatId === chatId
-              ? { ...chat, lastMessage: chat.lastMessage ? { ...chat.lastMessage, read: true } : null }
-              : chat,
-          ),
-        )
-      }
-    })
-
-    return () => {
-      socket.off("user_status")
-      socket.off("receive_message")
-      socket.off("messages_read")
-    }
-  }, [socket, currentUser._id])
-
-  const handleSelectChat = (chat) => {
-    if (!chat?.participant || !chat.participant._id) return
+  const handleSelectChat = async (chat) => {
+    if (!chat?.participant || !chat.participant._id) return;
     if (chat.unreadCount > 0) {
-      markMessagesAsRead(chat.chatId, currentUser._id).then(() => {
-        setChats((prev) => prev.map((c) => (c.chatId === chat.chatId ? { ...c, unreadCount: 0 } : c)))
-        socket?.emit("mark_read", { chatId: chat.chatId, userId: currentUser._id })
-      })
+      try {
+        await markMessagesAsRead(chat.chatId, currentUser._id);
+        setChats((prev) => prev.map((c) => (c.chatId === chat.chatId ? { ...c, unreadCount: 0 } : c)));
+      } catch (error) {
+        console.error("Error marking messages as read:", error);
+      }
     }
-    onSelectChat(chat.participant)
-  }
+    onSelectChat(chat.participant);
+  };
 
   if (loading) {
     return (
@@ -110,7 +52,7 @@ const ChatList = ({ currentUser, onSelectChat, selectedChatId }) => {
           <p className="text-purple-600 font-medium">Loading conversations...</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -168,13 +110,10 @@ const ChatList = ({ currentUser, onSelectChat, selectedChatId }) => {
             >
               <div className="relative">
                 <img
-                  src={chat.participant.profilePicture || "https://via.placeholder.com/40"}
+                  src={chat.participant.profilePicture || "https://placehold.co/40x40?text=User"}
                   alt={`${chat.participant.firstname} ${chat.participant.lastname}`}
                   className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
                 />
-                {onlineUsers.has(chat.participant._id) && (
-                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white"></span>
-                )}
               </div>
               <div className="ml-3 flex-1 overflow-hidden">
                 <div className="flex justify-between items-center">
@@ -214,7 +153,7 @@ const ChatList = ({ currentUser, onSelectChat, selectedChatId }) => {
         </ul>
       )}
     </div>
-  )
-}
+  );
+};
 
-export default ChatList
+export default ChatList;
