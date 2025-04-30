@@ -28,11 +28,11 @@ export const setupSocketServer = (server) => {
       credentials: true,
     },
     // Enable all transports, not just WebSockets
-    transports: ["polling", "websocket"],
-    allowUpgrades: true,
-    pingTimeout: 30000,
-    pingInterval: 25000,
-  })
+     transports: ['polling', 'websocket'],
+  allowUpgrades: false,
+  pingTimeout: 30000,
+  pingInterval: 25000
+})
 
   io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`)
