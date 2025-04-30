@@ -281,7 +281,7 @@ const Navbar = ({ user, setUser }) => {
             <div className="relative overflow-hidden rounded-lg p-1">
               <div className="absolute inset-0   transition-all duration-300 rounded-lg"></div>
               <img
-                src="../../public/logo.png"
+                src="/logo.png"
                 alt="RUETSocialLogo"
                 className="h-14 sm:h-16 xs:h-20 w-22 xs:w-30 drop-shadow-md relative z-10 transition-transform group-hover:scale-105 duration-300"
               />
