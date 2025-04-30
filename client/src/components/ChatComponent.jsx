@@ -1,168 +1,119 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
-import { getChatHistory, markMessagesAsRead, editMessage, deleteMessage, deleteChat } from "../services/api"
-import { io } from "socket.io-client"
-import { ThreeDotsVertical } from "react-bootstrap-icons"
+import { useState, useEffect, useRef } from "react";
+import { getChatHistory, markMessagesAsRead, editMessage, deleteMessage, deleteChat, sendMessage } from "../services/api";
+import { ThreeDotsVertical } from "react-bootstrap-icons";
 
 const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
-  const [messages, setMessages] = useState([])
-  const [newMessage, setNewMessage] = useState("")
-  const [socket, setSocket] = useState(null)
-  const [isTyping, setIsTyping] = useState(false)
-  const [chatId, setChatId] = useState(null)
-  const messagesEndRef = useRef(null)
-  const typingTimeoutRef = useRef(null)
-  const [editingMessageId, setEditingMessageId] = useState(null)
-  const [editedMessageText, setEditedMessageText] = useState("")
-  const editInputRef = useRef(null)
-  const [activeDropdown, setActiveDropdown] = useState(null)
-  const [showOptions, setShowOptions] = useState(false)
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [chatId, setChatId] = useState(null);
+  const messagesEndRef = useRef(null);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editedMessageText, setEditedMessageText] = useState("");
+  const editInputRef = useRef(null);
+  const [activeDropdown, setActiveDropdown] = useState(null);
+  const [showOptions, setShowOptions] = useState(false);
 
-  useEffect(() => {
-    const newSocket = io(import.meta.env.VITE_API_URL, {
-      transports: ["polling", "websocket"], // Allow polling as fallback
-      upgrade: true, // Allow transport upgrade
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 20000, // Increase timeout
-    })
-    setSocket(newSocket)
-    newSocket.emit("user_connected", currentUser._id)
-    return () => newSocket.disconnect()
-  }, [currentUser._id])
-
+  // Fetch chat history and set up polling
   useEffect(() => {
     const fetchChatHistory = async () => {
       try {
-        const response = await getChatHistory(currentUser._id, recipientUser._id)
-        setMessages(response.messages || [])
-        setChatId(response.chatId)
+        const response = await getChatHistory(currentUser._id, recipientUser._id);
+        setMessages(response.messages || []);
+        setChatId(response.chatId);
         if (response.chatId) {
-          await markMessagesAsRead(response.chatId, currentUser._id)
-          socket?.emit("mark_read", { chatId: response.chatId, userId: currentUser._id })
+          await markMessagesAsRead(response.chatId, currentUser._id);
         }
       } catch (error) {
-        console.error("Error fetching chat history:", error)
+        console.error("Error fetching chat history:", error);
       }
+    };
+
+    if (currentUser._id && recipientUser._id) {
+      fetchChatHistory();
+      // Poll every 5 seconds for new messages
+      const interval = setInterval(fetchChatHistory, 5000);
+      return () => clearInterval(interval);
     }
-    if (currentUser._id && recipientUser._id) fetchChatHistory()
-  }, [currentUser._id, recipientUser._id, socket])
+  }, [currentUser._id, recipientUser._id]);
 
   useEffect(() => {
-    if (editingMessageId && editInputRef.current) editInputRef.current.focus()
-  }, [editingMessageId])
+    if (editingMessageId && editInputRef.current) editInputRef.current.focus();
+  }, [editingMessageId]);
 
   useEffect(() => {
-    if (!socket) return
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
-    socket.on("receive_message", (data) => {
-      if (data.message.sender === recipientUser._id) {
-        setMessages((prev) => [...prev, data.message])
-        setChatId(data.chatId)
-        socket.emit("mark_read", { chatId: data.chatId, userId: currentUser._id })
-      }
-    })
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
 
-    socket.on("message_sent", (data) => {
-      setMessages((prev) => [...prev, data.message])
-      setChatId(data.chatId)
-    })
+    const messageData = {
+      chatId,
+      senderId: currentUser._id,
+      recipientId: recipientUser._id,
+      text: newMessage,
+    };
 
-    socket.on("typing", (data) => {
-      if (data.senderId === recipientUser._id) setIsTyping(true)
-    })
-
-    socket.on("stop_typing", (data) => {
-      if (data.senderId === recipientUser._id) setIsTyping(false)
-    })
-
-    socket.on("messages_read", (data) => {
-      if (data.readBy === recipientUser._id) {
-        setMessages((prev) => prev.map((msg) => (msg.sender === currentUser._id ? { ...msg, read: true } : msg)))
-      }
-    })
-
-    socket.on("message_edited", (data) => {
-      if (data.chatId === chatId) {
-        setMessages((prev) => prev.map((msg) => (msg._id === data.messageId ? { ...msg, text: data.text } : msg)))
-      }
-    })
-
-    socket.on("message_deleted", (data) => {
-      if (data.chatId === chatId) {
-        setMessages((prev) => prev.filter((msg) => msg._id !== data.messageId))
-      }
-    })
-
-    return () => {
-      socket.off("receive_message")
-      socket.off("message_sent")
-      socket.off("typing")
-      socket.off("stop_typing")
-      socket.off("messages_read")
-      socket.off("message_edited")
-      socket.off("message_deleted")
+    try {
+      const sentMessage = await sendMessage(messageData);
+      setMessages((prev) => [...prev, sentMessage]);
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
     }
-  }, [socket, currentUser._id, recipientUser._id, chatId])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-  const handleTyping = () => {
-    if (!socket) return
-    socket.emit("typing", { senderId: currentUser._id, recipientId: recipientUser._id })
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("stop_typing", { senderId: currentUser._id, recipientId: recipientUser._id })
-    }, 2000)
-  }
-
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !socket) return
-    socket.emit("send_message", { senderId: currentUser._id, recipientId: recipientUser._id, text: newMessage })
-    setNewMessage("")
-    socket.emit("stop_typing", { senderId: currentUser._id, recipientId: recipientUser._id })
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current)
-  }
+  };
 
   const handleEditMessage = (message) => {
-    setEditingMessageId(message._id)
-    setEditedMessageText(message.text)
-    setActiveDropdown(null)
-  }
+    setEditingMessageId(message._id);
+    setEditedMessageText(message.text);
+    setActiveDropdown(null);
+  };
 
   const handleSaveEditedMessage = async () => {
-    if (!editedMessageText.trim() || !chatId || !editingMessageId) return
-    await editMessage(chatId, editingMessageId, currentUser._id, editedMessageText)
-    socket?.emit("edit_message", { chatId, messageId: editingMessageId, text: editedMessageText })
-    setEditingMessageId(null)
-    setEditedMessageText("")
-  }
+    if (!editedMessageText.trim() || !chatId || !editingMessageId) return;
+    try {
+      await editMessage(chatId, editingMessageId, currentUser._id, editedMessageText);
+      setMessages((prev) =>
+        prev.map((msg) => (msg._id === editingMessageId ? { ...msg, text: editedMessageText } : msg))
+      );
+      setEditingMessageId(null);
+      setEditedMessageText("");
+    } catch (error) {
+      console.error("Error editing message:", error);
+    }
+  };
 
   const handleCancelEdit = () => {
-    setEditingMessageId(null)
-    setEditedMessageText("")
-  }
+    setEditingMessageId(null);
+    setEditedMessageText("");
+  };
 
   const handleDeleteMessage = async (messageId) => {
-    if (!chatId) return
-    await deleteMessage(chatId, messageId, currentUser._id)
-    socket?.emit("delete_message", { chatId, messageId })
-    setActiveDropdown(null)
-  }
+    if (!chatId) return;
+    try {
+      await deleteMessage(chatId, messageId, currentUser._id);
+      setMessages((prev) => prev.filter((msg) => msg._id !== messageId));
+      setActiveDropdown(null);
+    } catch (error) {
+      console.error("Error deleting message:", error);
+    }
+  };
 
   const handleDeleteChat = async () => {
-    if (!chatId || !window.confirm("Are you sure you want to delete this entire conversation?")) return
-    await deleteChat(chatId, currentUser._id)
-    onClose && onClose()
-  }
+    if (!chatId || !window.confirm("Are you sure you want to delete this entire conversation?")) return;
+    try {
+      await deleteChat(chatId, currentUser._id);
+      onClose && onClose();
+    } catch (error) {
+      console.error("Error deleting chat:", error);
+    }
+  };
 
   const toggleDropdown = (messageId) => {
-    setActiveDropdown(activeDropdown === messageId ? null : messageId)
-  }
+    setActiveDropdown(activeDropdown === messageId ? null : messageId);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -170,33 +121,13 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
         <div className="flex items-center">
           <div className="relative">
             <img
-              src={recipientUser.profilePicture || "https://via.placeholder.com/40"}
+              src={recipientUser.profilePicture || "https://placehold.co/40x40?text=User"}
               alt={`${recipientUser.firstname} ${recipientUser.lastname}`}
               className="w-10 h-10 rounded-full object-cover border-2 border-white shadow-sm"
             />
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
           </div>
           <div className="ml-3">
             <h3 className="font-semibold text-gray-800">{`${recipientUser.firstname} ${recipientUser.lastname}`}</h3>
-            {isTyping && (
-              <div className="flex items-center text-xs text-purple-600">
-                <span className="mr-1">typing</span>
-                <span className="flex space-x-1">
-                  <span
-                    className="w-1 h-1 bg-purple-600 rounded-full animate-bounce"
-                    style={{ animationDelay: "0ms" }}
-                  ></span>
-                  <span
-                    className="w-1 h-1 bg-purple-600 rounded-full animate-bounce"
-                    style={{ animationDelay: "150ms" }}
-                  ></span>
-                  <span
-                    className="w-1 h-1 bg-purple-600 rounded-full animate-bounce"
-                    style={{ animationDelay: "300ms" }}
-                  ></span>
-                </span>
-              </div>
-            )}
           </div>
         </div>
         <div className="relative">
@@ -306,36 +237,33 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
                           {new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                         {message.sender === currentUser._id && (
-                          <div className="flex items-center space-x-1">
-                            <span className="text-xs">{message.read ? "✓✓" : "✓"}</span>
-                            <div className="relative">
-                              <button
-                                className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                onClick={() => toggleDropdown(message._id)}
-                              >
-                                <ThreeDotsVertical
-                                  className={`w-3 h-3 ${
-                                    message.sender === currentUser._id ? "text-purple-200" : "text-gray-500"
-                                  }`}
-                                />
-                              </button>
-                              {activeDropdown === message._id && (
-                                <div className="absolute right-0 bottom-full mb-2 w-24 bg-white rounded-lg shadow-lg z-10 border border-gray-100">
-                                  <button
-                                    onClick={() => handleEditMessage(message)}
-                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteMessage(message._id)}
-                                    className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors duration-200"
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
-                              )}
-                            </div>
+                          <div className="relative">
+                            <button
+                              className="p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                              onClick={() => toggleDropdown(message._id)}
+                            >
+                              <ThreeDotsVertical
+                                className={`w-3 h-3 ${
+                                  message.sender === currentUser._id ? "text-purple-200" : "text-gray-500"
+                                }`}
+                              />
+                            </button>
+                            {activeDropdown === message._id && (
+                              <div className="absolute right-0 bottom-full mb-2 w-24 bg-white rounded-lg shadow-lg z-10 border border-gray-100">
+                                <button
+                                  onClick={() => handleEditMessage(message)}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteMessage(message._id)}
+                                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-gray-50 transition-colors duration-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -356,7 +284,6 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
               type="text"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              onKeyUp={handleTyping}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
               placeholder="Type a message..."
               className="w-full pl-4 pr-10 py-3 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
@@ -401,7 +328,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ChatComponent
+export default ChatComponent;
