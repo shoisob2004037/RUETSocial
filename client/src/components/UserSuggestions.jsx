@@ -12,22 +12,17 @@ const UserSuggestions = ({ users, currentUser }) => {
 
       try {
         setLoading(true);
-        console.log("Fetching user data for:", currentUser._id);
         const userData = await getUser(currentUser._id);
-        console.log("User data received:", userData);
 
         const followMap = {};
         if (userData.following && Array.isArray(userData.following)) {
-          console.log("Following array:", userData.following);
           userData.following.forEach((followId) => {
             followMap[followId] = true;
           });
         }
 
-        console.log("Created following map:", followMap);
         setFollowingStatus(followMap);
       } catch (err) {
-        console.error("Error fetching user data:", err);
       } finally {
         setLoading(false);
       }
@@ -38,22 +33,18 @@ const UserSuggestions = ({ users, currentUser }) => {
 
   const handleFollow = async (userId) => {
     try {
-      console.log("Attempting to follow user:", userId);
       await followUser(userId, currentUser._id);
-      console.log("Successfully followed user");
 
       setFollowingStatus((prev) => ({
         ...prev,
         [userId]: true,
       }));
     } catch (err) {
-      console.error("Follow error:", err);
       if (
         err.response &&
         err.response.data &&
         err.response.data.message === "You are already following this user"
       ) {
-        console.log("Already following user, updating state");
         setFollowingStatus((prev) => ({
           ...prev,
           [userId]: true,
@@ -64,21 +55,16 @@ const UserSuggestions = ({ users, currentUser }) => {
 
   const handleUnfollow = async (userId) => {
     try {
-      console.log("Attempting to unfollow user:", userId);
       await unfollowUser(userId, currentUser._id);
-      console.log("Successfully unfollowed user");
 
       setFollowingStatus((prev) => ({
         ...prev,
         [userId]: false,
       }));
     } catch (err) {
-      console.error("Unfollow error:", err);
+      
     }
   };
-
-  console.log("All users:", users);
-  console.log("Following status:", followingStatus);
 
   return (
     <div className="bg-white shadow-md rounded-lg mb-3">
