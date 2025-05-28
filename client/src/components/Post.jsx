@@ -137,7 +137,7 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
 
   return (
     <>
-      <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 mb-6">
+      <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300">
         {/* Shared Post Indicator */}
         {isShared && sharedBy && (
           <div className="px-4 pt-3 text-sm text-gray-500 flex items-center">
@@ -147,7 +147,7 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
             <Link to={`/profile/${sharedBy._id}`} className="text-teal-700 hover:underline">
               <strong>{sharedBy.firstname} {sharedBy.lastname}</strong>
             </Link>
-            <span className="ml-1">saved this post</span>
+            <span className="ml-1">Saved this post</span>
           </div>
         )}
 
@@ -157,7 +157,7 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
             <img
               src={postUser.profilePicture || "https://via.placeholder.com/40"}
               alt={`${postUser.firstname} ${postUser.lastname}`}
-              className="w-10 h-10 rounded-full mr-3 object-cover"
+              className="w-14 h-14 rounded-full mr-3 object-cover"
             />
             <div>
               <Link to={`/profile/${postUser._id}`} className="text-white font-medium hover:underline">
@@ -194,7 +194,7 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
         </div>
 
         {/* Post Content */}
-        <div className="p-4 bg-gray-50">
+        <div className=" bg-gray-50">
           <p className="text-gray-800 text-base">{customDescription || post.desc}</p>
           {post.image && (
             <div className="mt-3">
