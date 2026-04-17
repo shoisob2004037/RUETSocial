@@ -28,11 +28,11 @@ export const setupSocketServer = (server) => {
       credentials: true,
     },
     // Enable all transports, not just WebSockets
-     transports: ['polling', 'websocket'],
-  allowUpgrades: false,
-  pingTimeout: 30000,
-  pingInterval: 25000
-})
+    transports: ['polling', 'websocket'],
+    allowUpgrades: false,
+    pingTimeout: 30000,
+    pingInterval: 25000
+  })
 
   io.on("connection", (socket) => {
     console.log(`User connected: ${socket.id}`)
@@ -43,25 +43,27 @@ export const setupSocketServer = (server) => {
       io.emit("user_status", { userId, status: "online" })
     })
 
-    socket.on("send_message", async (messageData) => {
-      const { senderId, recipientId, text } = messageData
-      try {
-        let chat = await ChatModel.findOne({ participants: { $all: [senderId, recipientId] } })
-        if (!chat) chat = new ChatModel({ participants: [senderId, recipientId], messages: [] })
-        const newMessage = { sender: senderId, recipient: recipientId, text, read: false }
-        chat.messages.push(newMessage)
-        await chat.save()
-        const savedMessage = chat.messages[chat.messages.length - 1]
-        const recipientSocketId = onlineUsers.get(recipientId)
-        if (recipientSocketId) {
-          io.to(recipientSocketId).emit("receive_message", { chatId: chat._id, message: savedMessage })
-        }
-        socket.emit("message_sent", { chatId: chat._id, message: savedMessage })
-      } catch (error) {
-        console.error("Error handling message in socket:", error)
-        socket.emit("error", { message: "Failed to send message" })
-      }
+   socket.on("send_message", async (messageData) => {
+  try {
+    const recipientSocketId = onlineUsers.get(messageData.recipientId)
+
+    // 🔥 DO NOT CREATE MESSAGE AGAIN
+    if (recipientSocketId) {
+      io.to(recipientSocketId).emit("receive_message", {
+        chatId: messageData.chatId,
+        message: messageData.message
+      })
+    }
+
+    socket.emit("message_sent", {
+      chatId: messageData.chatId,
+      message: messageData.message
     })
+
+  } catch (error) {
+    console.error("Socket error:", error)
+  }
+})
 
     socket.on("typing", ({ senderId, recipientId }) => {
       const recipientSocketId = onlineUsers.get(recipientId)

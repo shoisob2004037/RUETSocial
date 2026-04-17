@@ -12,7 +12,29 @@ const messageSchema = mongoose.Schema(
     },
     text: {
       type: String,
-      required: true,
+      default: "",
+    },
+    mediaUrl: {
+      type: String,
+      default: null,
+    },
+    mediaType: {
+      type: String,
+      enum: ["image", "video", null],
+      default: null,
+    },
+    mediaPublicId: {
+      type: String,
+      default: null,
+    },
+    mediaThumbnail: {
+      type: String,
+      default: null,
+    },
+    messageType: {
+      type: String,
+      enum: ["text", "image", "video"],
+      default: "text",
     },
     read: {
       type: Boolean,
@@ -44,4 +66,3 @@ chatSchema.index({ participants: 1 })
 
 const ChatModel = mongoose.models.Chats || mongoose.model("Chats", chatSchema)
 export default ChatModel
-

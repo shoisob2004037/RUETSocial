@@ -14,6 +14,15 @@ const createAxiosInstance = () => {
   })
 }
 
+
+export const getFullMediaUrl = (url) => {
+  if (!url) return ""
+  if (url.startsWith("http")) return url
+  return `${import.meta.env.VITE_API_URL}${url}`
+}
+
+
+
 export const loginUser = async (email, password) => {
   try {
     const response = await axios.post(`${API_URL}/auth/login`, { email, password })
@@ -28,8 +37,6 @@ export const loginUser = async (email, password) => {
     throw error.response?.data || error.message
   }
 }
-
-
 
 export const preRegisterUser = async (userData) => {
   try {
@@ -413,7 +420,6 @@ export const getPost = async (postId) => {
 export const searchPosts = async (query) => {
   try {
     const api = createAxiosInstance()
-    // Changed to send the query in the request body instead of as a URL parameter
     const response = await api.post(`/post/search`, { query })
     return response.data
   } catch (error) {
@@ -422,9 +428,7 @@ export const searchPosts = async (query) => {
   }
 }
 
-// Add this to your existing api.js file if you need to fetch location data directly
-// This is an alternative approach if you don't want to use the LocationAutocomplete component
-
+// Location search (if needed)
 export const searchLocations = async (query) => {
   try {
     const response = await fetch(
@@ -440,7 +444,9 @@ export const searchLocations = async (query) => {
   }
 }
 
-// Chat-related API functions
+// ==================== CHAT API FUNCTIONS ====================
+
+// Get all chats for a user
 export const getUserChats = async (userId) => {
   try {
     const api = createAxiosInstance()
@@ -452,6 +458,7 @@ export const getUserChats = async (userId) => {
   }
 }
 
+// Get chat history between two users
 export const getChatHistory = async (userId, recipientId) => {
   try {
     const api = createAxiosInstance()
@@ -463,17 +470,45 @@ export const getChatHistory = async (userId, recipientId) => {
   }
 }
 
-export const sendMessage = async (senderId, recipientId, text) => {
+// Send a message (text or media)
+export const sendMessage = async (senderId, recipientId, text, mediaData = null, messageType = "text") => {
   try {
     const api = createAxiosInstance()
-    const response = await api.post("/chat", { senderId, recipientId, text })
-    return response.data
+
+    const body = { 
+      senderId, 
+      recipientId, 
+      text: text || "",
+      messageType
+    }
+
+    if (mediaData) {
+      body.mediaUrl = mediaData.url
+      body.mediaType = mediaData.type
+      body.mediaPublicId = mediaData.publicId
+      body.mediaThumbnail = mediaData.thumbnail || null
+    }
+
+    const response = await api.post("/chat", body)
+
+    // 🔥 normalize message (IMPORTANT)
+    const msg = response.data.message || response.data
+
+    return {
+      ...response.data,
+      message: {
+        ...msg,
+        mediaUrl: getFullMediaUrl(msg.mediaUrl)
+      }
+    }
+
   } catch (error) {
-    console.error("Error sending message:", error.response?.data || error.message)
+    console.error("Error sending message:", error)
     throw error.response?.data || error.message
   }
 }
 
+// Mark messages as read in a chat
 export const markMessagesAsRead = async (chatId, userId) => {
   try {
     const api = createAxiosInstance()
@@ -485,6 +520,7 @@ export const markMessagesAsRead = async (chatId, userId) => {
   }
 }
 
+// Delete an entire chat
 export const deleteChat = async (chatId, userId) => {
   try {
     const api = createAxiosInstance()
@@ -496,6 +532,7 @@ export const deleteChat = async (chatId, userId) => {
   }
 }
 
+// Edit a message
 export const editMessage = async (chatId, messageId, userId, text) => {
   try {
     const api = createAxiosInstance()
@@ -507,6 +544,7 @@ export const editMessage = async (chatId, messageId, userId, text) => {
   }
 }
 
+// Delete a single message
 export const deleteMessage = async (chatId, messageId, userId) => {
   try {
     const api = createAxiosInstance()
@@ -514,6 +552,82 @@ export const deleteMessage = async (chatId, messageId, userId) => {
     return response.data
   } catch (error) {
     console.error("Error deleting message:", error.response?.data || error.message)
+    throw error.response?.data || error.message
+  }
+}
+
+// ==================== MEDIA UPLOAD FUNCTIONS ====================
+
+// Upload image for posts or profile
+export const uploadImage = async (file, folder = "social_media") => {
+  try {
+    const formData = new FormData()
+    formData.append("image", file)
+    formData.append("folder", folder)
+    
+    const api = createAxiosInstance()
+    const response = await api.post("/upload/upload-image", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    })
+    
+    return response.data
+  } catch (error) {
+    console.error("Error uploading image:", error)
+    throw error.response?.data || error.message
+  }
+}
+
+// Upload chat media (images and videos)
+export const uploadChatMedia = async (file, senderId, recipientId) => {
+  try {
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("senderId", senderId)
+    formData.append("recipientId", recipientId)
+    formData.append("folder", "chat_media")
+    
+    const api = createAxiosInstance()
+    const response = await api.post("/upload/chat-media", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          console.log(`Upload progress: ${percentCompleted}%`)
+        }
+      }
+    })
+    
+    return response.data
+  } catch (error) {
+    console.error("Error uploading chat media:", error)
+    throw error.response?.data || error.message
+  }
+}
+
+// Delete media from Cloudinary
+export const deleteMedia = async (publicId, resourceType = "image") => {
+  try {
+    const api = createAxiosInstance()
+    const response = await api.delete(`/upload/delete-media/${publicId}?resourceType=${resourceType}`)
+    return response.data
+  } catch (error) {
+    console.error("Error deleting media:", error)
+    throw error.response?.data || error.message
+  }
+}
+
+// Check upload service health
+export const checkUploadHealth = async () => {
+  try {
+    const api = createAxiosInstance()
+    const response = await api.get("/upload/health")
+    return response.data
+  } catch (error) {
+    console.error("Error checking upload health:", error)
     throw error.response?.data || error.message
   }
 }

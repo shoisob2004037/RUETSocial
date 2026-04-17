@@ -60,7 +60,7 @@ const Navbar = ({ user, setUser }) => {
   }, [showMobileMenu])
 
   useEffect(() => {
-    if (!user || !user.user) return
+    if (!user?.user?._id) return
 
     const newSocket = io(import.meta.env.VITE_API_URL, {
       transports: ["websocket"],
@@ -77,7 +77,7 @@ const Navbar = ({ user, setUser }) => {
   }, [user])
 
   useEffect(() => {
-    if (!socket || !user?.user) return
+    if (!socket || !user?.user?._id) return
 
     const handleReceiveMessage = (data) => {
       if (data.chatId !== currentChatId) {
@@ -99,7 +99,7 @@ const Navbar = ({ user, setUser }) => {
   }, [socket, user, currentChatId])
 
   useEffect(() => {
-    if (!user || !user.user) return
+    if (!user?.user?._id) return
 
     fetchNotifications()
     fetchUnreadMessages()
@@ -116,6 +116,7 @@ const Navbar = ({ user, setUser }) => {
 
   const fetchNotifications = async () => {
     try {
+      if (!user?.user?._id) return
       const data = await getUserNotifications(user.user._id)
       const unread = data.filter((notification) => !notification.read).length
       setUnreadNotificationCount(unread)
@@ -126,6 +127,7 @@ const Navbar = ({ user, setUser }) => {
 
   const fetchUnreadMessages = async () => {
     try {
+      if (!user?.user?._id) return
       const chats = await getUserChats(user.user._id)
       const totalUnread = chats.reduce((sum, chat) => sum + chat.unreadCount, 0)
       setUnreadMessageCount(totalUnread)
@@ -136,6 +138,7 @@ const Navbar = ({ user, setUser }) => {
 
   const fetchSavedPostsCount = async () => {
     try {
+      if (!user?.user?._id) return
       const savedPosts = await getSavedPosts(user.user._id)
       setSavedPostsCount(savedPosts.length)
     } catch (error) {
@@ -153,7 +156,7 @@ const Navbar = ({ user, setUser }) => {
       try {
         const allUsers = await getAllUsers()
         const filteredUsers = allUsers.filter((u) => {
-          if (u._id === user.user._id) return false
+          if (u._id === user?.user?._id) return false
 
           // Filter by department if departmentFilter is set
           if (departmentFilter && u.department !== departmentFilter) return false
@@ -308,7 +311,8 @@ const Navbar = ({ user, setUser }) => {
     }
   }
 
-  if (!user) return null
+  // Early return if user or user.user is not available
+  if (!user || !user.user) return null
 
   return (
     <nav className="bg-gradient-to-r from-teal-700 to-green-900 shadow-xl p-3 sm:p-4 sticky top-0 z-50 backdrop-blur-sm border-b border-white/10">

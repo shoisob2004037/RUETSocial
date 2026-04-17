@@ -5,6 +5,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllUsers, getUser } from "../services/api";
 import ChatList from "../components/ChatList";
 import ChatComponent from "../components/ChatComponent";
+import { ChevronLeft, Search, Users, MessageCircle, X } from "lucide-react";
 
 const Message = ({ user }) => {
   const navigate = useNavigate();
@@ -17,28 +18,48 @@ const Message = ({ user }) => {
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("chat");
-  const [mobileView, setMobileView] = useState("list"); // "list" or "chat"
+  const [isMobile, setIsMobile] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
+  // Check screen size
   useEffect(() => {
-    const handleResize = () => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 768);
       if (window.innerWidth >= 768) {
-        setMobileView("both");
-      } else {
-        setMobileView(selectedUser ? "chat" : "list");
+        setShowChat(true);
       }
     };
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
+  }, []);
 
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [selectedUser]);
+  // Load user from URL params
+  useEffect(() => {
+    const loadUserFromParams = async () => {
+      if (userId && userId !== user.user._id) {
+        try {
+          const userData = await getUser(userId);
+          setSelectedUser(userData);
+          if (isMobile) {
+            setShowChat(true);
+          }
+        } catch (error) {
+          console.error("Error loading user from params:", error);
+          setSelectedUser(null);
+        }
+      }
+    };
+    loadUserFromParams();
+  }, [userId, user.user._id, isMobile]);
 
+  // Fetch following users
   useEffect(() => {
     const fetchFollowingUsers = async () => {
       try {
         setLoading(true);
         const currentUserData = await getUser(user.user._id);
-        const followingPromises = currentUserData.following.map(async (id) => {
+        const followingPromises = (currentUserData.following || []).map(async (id) => {
           try {
             const userData = await getUser(id);
             return userData;
@@ -47,33 +68,17 @@ const Message = ({ user }) => {
             return null;
           }
         });
-        const followingData = (await Promise.all(followingPromises)).filter((user) => user !== null);
+        const followingData = (await Promise.all(followingPromises)).filter((u) => u !== null);
         setFollowingUsers(followingData);
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching following users:", error);
         setFollowingUsers([]);
+      } finally {
         setLoading(false);
       }
     };
     fetchFollowingUsers();
   }, [user.user._id]);
-
-  useEffect(() => {
-    const loadUserFromParams = async () => {
-      if (userId && userId !== user.user._id) {
-        try {
-          const userData = await getUser(userId);
-          setSelectedUser(userData);
-          setMobileView("chat");
-        } catch (error) {
-          console.error("Error loading user from params:", error);
-          setSelectedUser(null);
-        }
-      }
-    };
-    loadUserFromParams();
-  }, [userId, user.user._id]);
 
   const handleSearchChange = async (e) => {
     const query = e.target.value;
@@ -104,55 +109,75 @@ const Message = ({ user }) => {
     setSearchQuery("");
     setShowSearchResults(false);
     setActiveTab("chat");
-    setMobileView("chat");
+    if (isMobile) {
+      setShowChat(true);
+    }
     navigate(`/message/${selectedUser._id}`, { replace: true });
   };
 
   const handleBackToList = () => {
-    setMobileView("list");
+    setShowChat(false);
+    navigate("/message", { replace: true });
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <div className="flex-grow flex overflow-hidden">
-        {/* Sidebar - Chat List & People */}
-        <div 
-          className={`${
-            mobileView === "chat" ? "hidden md:flex" : "flex"
-          } w-full md:w-1/3 lg:w-1/4 bg-white shadow-lg flex-col border-r border-gray-200`}
-        >
-          <div className="flex border-b border-gray-200">
+  const clearSearch = () => {
+    setSearchQuery("");
+    setShowSearchResults(false);
+    setSearchResults([]);
+  };
+
+  // Desktop view: show both sidebar and chat
+  if (!isMobile) {
+    return (
+      <div className="flex h-screen bg-gray-50 overflow-hidden">
+        {/* Sidebar - Fixed width */}
+        <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-lg">
+          {/* Header */}
+          <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-indigo-600">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <MessageCircle className="w-6 h-6" />
+              Messages
+            </h1>
+            <p className="text-purple-100 text-sm mt-1">Connect with your friends</p>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 bg-white">
             <button
-              className={`flex-1 py-4 text-center font-medium transition-colors duration-200 ${
-                activeTab === "chat" 
-                  ? "text-purple-600 border-b-2 border-purple-600" 
+              className={`flex-1 py-3 text-center font-semibold transition-all duration-200 relative ${
+                activeTab === "chat"
+                  ? "text-purple-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => setActiveTab("chat")}
             >
-              <div className="flex items-center justify-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-                </svg>
-                Chats
+              <div className="flex items-center justify-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                <span>Chats</span>
               </div>
+              {activeTab === "chat" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600"></div>
+              )}
             </button>
             <button
-              className={`flex-1 py-4 text-center font-medium transition-colors duration-200 ${
-                activeTab === "people" 
-                  ? "text-purple-600 border-b-2 border-purple-600" 
+              className={`flex-1 py-3 text-center font-semibold transition-all duration-200 relative ${
+                activeTab === "people"
+                  ? "text-purple-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
               onClick={() => setActiveTab("people")}
             >
-              <div className="flex items-center justify-center">
-                <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                </svg>
-                People
+              <div className="flex items-center justify-center gap-2">
+                <Users className="w-4 h-4" />
+                <span>People</span>
               </div>
+              {activeTab === "people" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600"></div>
+              )}
             </button>
           </div>
+
+          {/* Content */}
           <div className="flex-1 overflow-y-auto">
             {activeTab === "chat" && (
               <ChatList
@@ -162,100 +187,126 @@ const Message = ({ user }) => {
               />
             )}
             {activeTab === "people" && (
-              <div className="p-4 h-full flex flex-col">
+              <div className="p-4">
+                {/* Search Bar */}
                 <div className="relative mb-4">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                  </div>
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search users..."
                     value={searchQuery}
                     onChange={handleSearchChange}
-                    className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50"
                   />
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <X className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                    </button>
+                  )}
                 </div>
-                
+
+                {/* Search Results */}
                 {showSearchResults && (
-                  <div className="bg-white rounded-lg shadow-md max-h-60 overflow-y-auto mb-4 border border-gray-100">
+                  <div className="mb-4 bg-white rounded-xl shadow-lg border border-gray-100 max-h-80 overflow-y-auto">
                     {searchResults.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">
-                        <svg className="w-8 h-8 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        No users found
+                      <div className="p-8 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Search className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500 font-medium">No users found</p>
+                        <p className="text-sm text-gray-400 mt-1">Try a different name</p>
                       </div>
                     ) : (
-                      <ul className="divide-y divide-gray-100">
-                        {searchResults.map((user) => (
-                          <li
-                            key={user._id}
-                            className="flex items-center p-3 hover:bg-purple-50 cursor-pointer transition-colors duration-200"
-                            onClick={() => handleSelectUser(user)}
+                      <div>
+                        <div className="p-3 bg-gray-50 border-b border-gray-100">
+                          <p className="text-sm text-gray-500 font-medium">
+                            Found {searchResults.length} users
+                          </p>
+                        </div>
+                        {searchResults.map((userItem) => (
+                          <button
+                            key={userItem._id}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-purple-50 transition-all duration-200 border-b border-gray-50 last:border-0"
+                            onClick={() => handleSelectUser(userItem)}
                           >
                             <img
-                              src={user.profilePicture || "https://via.placeholder.com/40"}
-                              alt={`${user.firstname} ${user.lastname}`}
-                              className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                              src={userItem.profilePicture || "https://via.placeholder.com/48"}
+                              alt={userItem.firstname}
+                              className="w-12 h-12 rounded-full object-cover border-2 border-purple-200"
                             />
-                            <div className="ml-3">
-                              <span className="font-medium text-gray-800">{`${user.firstname} ${user.lastname}`}</span>
-                              {user.worksAt && (
-                                <p className="text-xs text-gray-500">Works at {user.worksAt}</p>
+                            <div className="flex-1 text-left">
+                              <p className="font-semibold text-gray-800">
+                                {userItem.firstname} {userItem.lastname}
+                              </p>
+                              {userItem.department && (
+                                <p className="text-xs text-gray-500">{userItem.department}</p>
                               )}
                             </div>
-                          </li>
+                            <button className="px-3 py-1.5 bg-purple-600 text-white text-sm rounded-full hover:bg-purple-700 transition-colors">
+                              Message
+                            </button>
+                          </button>
                         ))}
-                      </ul>
+                      </div>
                     )}
                   </div>
                 )}
-                
-                <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                  </svg>
-                  People You Follow
-                </h3>
-                
+
+                {/* Following Users List */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-purple-600" />
+                    People You Follow
+                  </h3>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded-full">
+                    {followingUsers.length}
+                  </span>
+                </div>
+
                 {loading ? (
-                  <div className="flex justify-center py-6">
-                    <div className="w-8 h-8 border-4 border-t-purple-600 border-purple-200 rounded-full animate-spin"></div>
+                  <div className="flex justify-center py-12">
+                    <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
                   </div>
                 ) : followingUsers.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center flex-grow py-8">
-                    <div className="bg-purple-100 p-3 rounded-full mb-3">
-                      <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-                      </svg>
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-10 h-10 text-purple-600" />
                     </div>
-                    <p className="text-center text-gray-500 font-medium">You're not following anyone yet</p>
-                    <p className="text-center text-gray-400 text-sm mt-1">Follow people to start conversations</p>
+                    <p className="text-gray-600 font-medium">No follows yet</p>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Follow people to start conversations
+                    </p>
                   </div>
                 ) : (
-                  <ul className="divide-y divide-gray-100 overflow-y-auto flex-grow">
-                    {followingUsers.map((user) => (
-                      <li
-                        key={user._id}
-                        className="flex items-center p-3 hover:bg-purple-50 cursor-pointer transition-colors duration-200"
-                        onClick={() => handleSelectUser(user)}
+                  <div className="space-y-2">
+                    {followingUsers.map((userItem) => (
+                      <button
+                        key={userItem._id}
+                        className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-purple-50 transition-all duration-200 group"
+                        onClick={() => handleSelectUser(userItem)}
                       >
                         <img
-                          src={user.profilePicture || "https://via.placeholder.com/40"}
-                          alt={`${user.firstname} ${user.lastname}`}
-                          className="w-10 h-10 rounded-full object-cover border border-gray-200"
+                          src={userItem.profilePicture || "https://via.placeholder.com/48"}
+                          alt={userItem.firstname}
+                          className="w-12 h-12 rounded-full object-cover border-2 border-gray-200 group-hover:border-purple-300 transition-colors"
                         />
-                        <div className="ml-3">
-                          <span className="font-medium text-gray-800">{`${user.firstname} ${user.lastname}`}</span>
-                          {user.worksAt && (
-                            <p className="text-xs text-gray-500">Works at {user.worksAt}</p>
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold text-gray-800">
+                            {userItem.firstname} {userItem.lastname}
+                          </p>
+                          {userItem.department && (
+                            <p className="text-xs text-gray-500">{userItem.department}</p>
                           )}
                         </div>
-                      </li>
+                        <button className="px-3 py-1.5 bg-gray-100 text-gray-600 text-sm rounded-full group-hover:bg-purple-600 group-hover:text-white transition-all">
+                          Message
+                        </button>
+                      </button>
                     ))}
-                  </ul>
+                  </div>
                 )}
               </div>
             )}
@@ -263,50 +314,217 @@ const Message = ({ user }) => {
         </div>
 
         {/* Chat Area */}
-        <div 
-          className={`${
-            mobileView === "list" ? "hidden md:flex" : "flex"
-          } w-full md:w-2/3 lg:w-3/4 flex-col bg-gray-50`}
-        >
+        <div className="flex-1 bg-gray-50">
           {selectedUser ? (
-            <>
-              {/* Mobile back button */}
-              <div className="md:hidden bg-white border-b border-gray-200 p-2">
-                <button 
-                  onClick={handleBackToList}
-                  className="flex items-center text-purple-600 font-medium"
-                >
-                  <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
-                  </svg>
-                  Back to messages
-                </button>
-              </div>
-              <ChatComponent 
-                currentUser={user.user} 
-                recipientUser={selectedUser} 
-                onClose={() => {
-                  setSelectedUser(null);
-                  setMobileView("list");
-                  navigate("/message", { replace: true });
-                }}
-              />
-            </>
+            <ChatComponent
+              currentUser={user.user}
+              recipientUser={selectedUser}
+              onClose={() => {
+                setSelectedUser(null);
+                navigate("/message", { replace: true });
+              }}
+            />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-white bg-opacity-70">
-              <div className="bg-purple-100 p-6 rounded-full mb-4">
-                <svg className="w-16 h-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
-                </svg>
+            <div className="h-full flex flex-col items-center justify-center p-8">
+              <div className="bg-gradient-to-br from-purple-100 to-indigo-100 p-8 rounded-full mb-6">
+                <MessageCircle className="w-20 h-20 text-purple-600" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Your Messages</h3>
-              <p className="text-gray-500 text-center max-w-md">
-                Select a conversation from the list or start a new one by finding someone in the People tab
+              <h2 className="text-3xl font-bold text-gray-800 mb-2">Your Messages</h2>
+              <p className="text-gray-500 text-center max-w-md mb-6">
+                Select a conversation from the sidebar or start a new one by finding someone in the People tab
               </p>
+              <button
+                onClick={() => setActiveTab("people")}
+                className="px-6 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-medium flex items-center gap-2"
+              >
+                <Users className="w-4 h-4" />
+                Find People
+              </button>
             </div>
           )}
         </div>
       </div>
+    );
+  }
+
+  // Mobile view: show either list or chat
+  return (
+    <div className="h-screen bg-gray-50 overflow-hidden">
+      {!showChat ? (
+        // Chat List View
+        <div className="h-full flex flex-col">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5">
+            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+              <MessageCircle className="w-6 h-6" />
+              Messages
+            </h1>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex border-b border-gray-200 bg-white">
+            <button
+              className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
+                activeTab === "chat"
+                  ? "text-purple-600 border-b-2 border-purple-600"
+                  : "text-gray-500"
+              }`}
+              onClick={() => setActiveTab("chat")}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                <span>Chats</span>
+              </div>
+            </button>
+            <button
+              className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
+                activeTab === "people"
+                  ? "text-purple-600 border-b-2 border-purple-600"
+                  : "text-gray-500"
+              }`}
+              onClick={() => setActiveTab("people")}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Users className="w-5 h-5" />
+                <span>People</span>
+              </div>
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            {activeTab === "chat" && (
+              <ChatList
+                currentUser={user.user}
+                onSelectChat={handleSelectUser}
+                selectedChatId={selectedUser?._id}
+              />
+            )}
+            {activeTab === "people" && (
+              <div className="p-4">
+                {/* Search Bar */}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                    className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={clearSearch}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2"
+                    >
+                      <X className="w-4 h-4 text-gray-400" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Search Results */}
+                {showSearchResults && (
+                  <div className="mb-4 bg-white rounded-xl shadow-lg max-h-96 overflow-y-auto">
+                    {searchResults.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                          <Search className="w-8 h-8 text-gray-400" />
+                        </div>
+                        <p className="text-gray-500">No users found</p>
+                      </div>
+                    ) : (
+                      searchResults.map((userItem) => (
+                        <button
+                          key={userItem._id}
+                          className="w-full flex items-center gap-3 p-4 hover:bg-purple-50 border-b border-gray-100"
+                          onClick={() => handleSelectUser(userItem)}
+                        >
+                          <img
+                            src={userItem.profilePicture || "https://via.placeholder.com/50"}
+                            alt={userItem.firstname}
+                            className="w-14 h-14 rounded-full object-cover"
+                          />
+                          <div className="flex-1 text-left">
+                            <p className="font-semibold text-gray-800">
+                              {userItem.firstname} {userItem.lastname}
+                            </p>
+                            {userItem.department && (
+                              <p className="text-xs text-gray-500">{userItem.department}</p>
+                            )}
+                          </div>
+                          <button className="px-4 py-2 bg-purple-600 text-white text-sm rounded-full">
+                            Message
+                          </button>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Following Users */}
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <Users className="w-5 h-5 text-purple-600" />
+                    Following
+                  </h3>
+                  <span className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                    {followingUsers.length}
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="flex justify-center py-12">
+                    <div className="w-10 h-10 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+                  </div>
+                ) : followingUsers.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Users className="w-10 h-10 text-purple-600" />
+                    </div>
+                    <p className="text-gray-600">No follows yet</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {followingUsers.map((userItem) => (
+                      <button
+                        key={userItem._id}
+                        className="w-full flex items-center gap-3 p-4 rounded-xl hover:bg-purple-50 transition-all"
+                        onClick={() => handleSelectUser(userItem)}
+                      >
+                        <img
+                          src={userItem.profilePicture || "https://via.placeholder.com/50"}
+                          alt={userItem.firstname}
+                          className="w-14 h-14 rounded-full object-cover"
+                        />
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold text-gray-800">
+                            {userItem.firstname} {userItem.lastname}
+                          </p>
+                          {userItem.department && (
+                            <p className="text-xs text-gray-500">{userItem.department}</p>
+                          )}
+                        </div>
+                        <button className="px-4 py-2 bg-purple-600 text-white text-sm rounded-full">
+                          Chat
+                        </button>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        // Chat View for Mobile
+        <div className="h-full flex flex-col">
+          <ChatComponent
+            currentUser={user.user}
+            recipientUser={selectedUser}
+            onClose={handleBackToList}
+          />
+        </div>
+      )}
     </div>
   );
 };

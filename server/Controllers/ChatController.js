@@ -7,7 +7,7 @@ export const getUserChats = async (req, res) => {
     const chats = await ChatModel.find({ participants: userId }).sort({ updatedAt: -1 });
     const otherParticipantIds = chats.map(chat => chat.participants.find(p => p !== userId)).filter(Boolean);
     const users = await UserModel.find({ _id: { $in: otherParticipantIds } }, "firstname lastname profilePicture");
-    const userMap = Object.fromEntries(users.map(user => [user._id, user]));
+    const userMap = Object.fromEntries(users.map(user => [user._id.toString(), user]));
     const formattedChats = chats.map(chat => ({
       chatId: chat._id,
       participant: userMap[chat.participants.find(p => p !== userId)],
@@ -28,9 +28,9 @@ export const getChatHistory = async (req, res) => {
     const chat = await ChatModel.findOne({ participants: { $all: [userId, recipientId] } });
     if (!chat) return res.status(200).json({ chatId: null, messages: [] });
     await ChatModel.updateMany(
-      { _id: chat._id, "messages.sender": recipientId, "messages.read": false },
+      { _id: chat._id, "messages.recipient": userId, "messages.read": false },
       { $set: { "messages.$[elem].read": true } },
-      { arrayFilters: [{ "elem.sender": recipientId, "elem.read": false }] }
+      { arrayFilters: [{ "elem.recipient": userId, "elem.read": false }] }
     );
     const updatedChat = await ChatModel.findById(chat._id);
     res.status(200).json({ chatId: chat._id, messages: updatedChat.messages });
@@ -41,12 +41,31 @@ export const getChatHistory = async (req, res) => {
 }
 
 export const sendMessage = async (req, res) => {
-  const { senderId, recipientId, text } = req.body
+  const { senderId, recipientId, text, mediaUrl, mediaType, mediaPublicId, mediaThumbnail, messageType } = req.body
   try {
-    if (!text?.trim()) return res.status(400).json({ message: "Message text is required" });
+    if (!text?.trim() && !mediaUrl) {
+      return res.status(400).json({ message: "Message text or media is required" });
+    }
+    
     let chat = await ChatModel.findOne({ participants: { $all: [senderId, recipientId] } });
     if (!chat) chat = new ChatModel({ participants: [senderId, recipientId], messages: [] });
-    const newMessage = { sender: senderId, recipient: recipientId, text, read: false };
+    
+    const newMessage = { 
+      sender: senderId, 
+      recipient: recipientId, 
+      text: text || "",
+      messageType: messageType || "text",
+      read: false 
+    };
+    
+    // Add media fields if present
+    if (mediaUrl) {
+      newMessage.mediaUrl = mediaUrl;
+      newMessage.mediaType = mediaType;
+      newMessage.mediaPublicId = mediaPublicId;
+      newMessage.mediaThumbnail = mediaThumbnail;
+    }
+    
     chat.messages.push(newMessage);
     await chat.save();
     const savedMessage = chat.messages[chat.messages.length - 1];
@@ -57,6 +76,7 @@ export const sendMessage = async (req, res) => {
   }
 }
 
+// Rest of your controller functions remain the same...
 export const markMessagesAsRead = async (req, res) => {
   const { chatId, userId } = req.params
   try {

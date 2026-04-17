@@ -47,6 +47,12 @@ const CreatePost = ({ user, onPostCreated }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!postText.trim() && !image) return;
+    
+    // Check if user data is available
+    if (!user?.user?._id) {
+      setError("User data not available. Please log in again.");
+      return;
+    }
 
     setLoading(true);
     setError("");
@@ -108,6 +114,15 @@ const CreatePost = ({ user, onPostCreated }) => {
     return text.replace(/#\w+/g, '<span class="text-blue-500">$&</span>');
   };
 
+  // Early return if user data is not available
+  if (!user || !user.user) {
+    return (
+      <div className="bg-white shadow-md rounded-lg p-4 mb-4">
+        <div className="text-red-500 text-center">Please log in to create posts.</div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white shadow-md rounded-lg p-4 mb-4">
       {error && (
@@ -118,6 +133,10 @@ const CreatePost = ({ user, onPostCreated }) => {
           src={user.user.profilePicture || "https://via.placeholder.com/40"}
           alt={`${user.user.firstname} ${user.user.lastname}`}
           className="w-10 h-10 rounded-full"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = "https://via.placeholder.com/40";
+          }}
         />
         <form onSubmit={handleSubmit} className="flex-1">
           <div className="mb-3">
@@ -159,6 +178,7 @@ const CreatePost = ({ user, onPostCreated }) => {
               <button
                 onClick={removeImage}
                 className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-600 transition-colors"
+                type="button"
               >
                 ×
               </button>

@@ -12,16 +12,19 @@ import NotificationRoute from "./Routes/NotificationRoute.js"
 import ChatRoute from "./Routes/ChatRoute.js"
 import { setupSocketServer } from "./socket.js"
 
+// ✅ MUST be first before anything uses process.env
+dotenv.config()
+
 const app = express()
 const server = http.createServer(app)
 
-// CORS Middleware
+// ✅ Now process.env.FRONTEND_URL will actually work
 app.use(
   cors({
     origin: [
       process.env.FRONTEND_URL,
-      "http://127.0.0.1:5173",
-      "https://ruet-social.vercel.app", // Add your frontend Vercel URL
+      "https://ruet-social.vercel.app",
+      "http://localhost:5173",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
@@ -29,14 +32,9 @@ app.use(
   }),
 )
 
-// Middleware
 app.use(bodyParser.json({ limit: "30mb", extended: true }))
 app.use(bodyParser.urlencoded({ limit: "30mb", extended: true }))
 
-// Load environment variables
-dotenv.config()
-
-// Setup Socket.io
 const io = setupSocketServer(server)
 
 mongoose
@@ -58,7 +56,6 @@ app.use("/upload", UploadRoute)
 app.use("/notifications", NotificationRoute)
 app.use("/chat", ChatRoute)
 
-// Add this near the top of your routes
 app.use("/health", (req, res) => {
   res.status(200).send("OK")
 })
