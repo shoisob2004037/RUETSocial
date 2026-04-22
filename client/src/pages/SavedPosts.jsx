@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { getSavedPosts, getUser } from "../services/api"
 import LoadingSpinner from "../components/LoadingSpinner"
 
@@ -67,79 +67,111 @@ const SavedPosts = ({ user }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
       {/* Header Section */}
-      <div className="mb-8">
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-5 bg-gradient-to-r from-teal-700 to-green-900 text-white rounded-t-lg">
-            <h1 className="text-2xl font-bold tracking-tight">Saved Posts</h1>
-            <p className="text-gray-200 text-sm mt-1">Posts you've saved for later.</p>
+      <div className="mb-6">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="px-4 py-4 border-b border-gray-200 bg-gray-50">
+            <h1 className="text-xl font-bold text-gray-900">Saved Posts</h1>
+            <p className="text-gray-500 text-sm mt-0.5">Posts you've saved for later.</p>
           </div>
         </div>
       </div>
 
       {/* Content Section */}
       {loading ? (
-        <div className="flex justify-center items-center py-12">
+        <div className="flex justify-center items-center py-20">
           <LoadingSpinner />
         </div>
       ) : error ? (
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-          <p className="text-red-500 text-base font-medium">{error}</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+          <svg className="w-12 h-12 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-red-600 font-medium">{error}</p>
         </div>
       ) : posts.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-          <p className="text-gray-600 text-base">You haven't saved any posts yet.</p>
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+          </svg>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">No saved posts yet</h3>
+          <p className="text-gray-500 text-sm">When you save posts, they'll appear here for easy access.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
+          >
+            Browse Feed
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6">
-          {posts.map((post, index) => (
+        <div className="space-y-4">
+          {posts.map((post) => (
             <div
               key={post._id}
-              className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer overflow-hidden"
+              className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-pointer overflow-hidden"
               onClick={() => navigateToPost(post._id)}
-              aria-label={`View post by ${getUsernameById(post.userId)}`}
             >
-              {/* Image Section */}
-              <div className="relative h-48 w-full overflow-hidden">
-                {post.image ? (
+              {/* Image Section - Full width, no padding */}
+              {post.image && (
+                <div className="w-full bg-gray-100">
                   <img
                     src={post.image}
                     alt={post.desc || "Post"}
-                    className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    onError={(e) => (e.target.src = "https://via.placeholder.com/800x200?text=No+Image")}
+                    className="w-full h-auto max-h-[500px] object-contain"
+                    onError={(e) => (e.target.src = "https://via.placeholder.com/800x400?text=Image+Not+Available")}
                   />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">No Image</span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300"></div>
-              </div>
+                </div>
+              )}
 
               {/* Content Section */}
-              <div className="p-5 bg-gray-50">
-                <h2 className="text-lg font-semibold text-gray-800 mb-2">{truncateText(post.desc || "Untitled Post")}</h2>
+              <div className="p-4">
+                {post.desc && (
+                  <p className="text-gray-800 text-base leading-relaxed mb-3">
+                    {truncateText(post.desc)}
+                  </p>
+                )}
               </div>
 
-              {/* Footer Section */}
-              <div className="px-5 py-3 bg-white border-t border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              {/* Footer Section - Author Info */}
+              <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   {usersMap[post.userId]?.profilePicture ? (
                     <img
                       src={usersMap[post.userId].profilePicture}
                       alt={getUsernameById(post.userId)}
                       className="w-8 h-8 rounded-full object-cover"
-                      onError={(e) => (e.target.src = "https://via.placeholder.com/40")}
+                      onError={(e) => (e.target.src = "https://via.placeholder.com/32")}
                     />
                   ) : (
-                    <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
+                    <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                      <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                      </svg>
+                    </div>
                   )}
-                  <p className="text-sm font-medium text-teal-700 hover:underline">{getUsernameById(post.userId)}</p>
+                  <div>
+                    <Link
+                      to={`/profile/${post.userId}`}
+                      className="text-sm font-medium text-gray-900 hover:text-blue-600"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {getUsernameById(post.userId)}
+                    </Link>
+                    <p className="text-xs text-gray-400">
+                      {new Date(post.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleDateString()}</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    // Add unsave functionality here if needed
+                  }}
+                  className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                >
+                  Saved ✓
+                </button>
               </div>
             </div>
           ))}

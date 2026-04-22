@@ -129,11 +129,11 @@ const Message = ({ user }) => {
   // Desktop view: show both sidebar and chat
   if (!isMobile) {
     return (
-      <div className="flex h-screen bg-gray-50 overflow-hidden">
-        {/* Sidebar - Fixed width */}
-        <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-lg">
-          {/* Header */}
-          <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-indigo-600">
+      <div className="h-screen flex bg-gray-50 overflow-hidden">
+        {/* Sidebar - Full height with flex column */}
+        <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-lg h-full overflow-hidden">
+          {/* FIXED Header - Never scrolls */}
+          <div className="flex-shrink-0 p-5 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-indigo-600">
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <MessageCircle className="w-6 h-6" />
               Messages
@@ -141,8 +141,8 @@ const Message = ({ user }) => {
             <p className="text-purple-100 text-sm mt-1">Connect with your friends</p>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 bg-white">
+          {/* FIXED Tabs - Never scrolls */}
+          <div className="flex-shrink-0 flex border-b border-gray-200 bg-white">
             <button
               className={`flex-1 py-3 text-center font-semibold transition-all duration-200 relative ${
                 activeTab === "chat"
@@ -177,8 +177,8 @@ const Message = ({ user }) => {
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* SCROLLABLE Content - Only this part scrolls */}
+          <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === "chat" && (
               <ChatList
                 currentUser={user.user}
@@ -189,7 +189,7 @@ const Message = ({ user }) => {
             {activeTab === "people" && (
               <div className="p-4">
                 {/* Search Bar */}
-                <div className="relative mb-4">
+                <div className="relative mb-4 sticky top-0 bg-white z-10">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                   <input
                     type="text"
@@ -281,7 +281,7 @@ const Message = ({ user }) => {
                     </p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 pb-4">
                     {followingUsers.map((userItem) => (
                       <button
                         key={userItem._id}
@@ -313,8 +313,8 @@ const Message = ({ user }) => {
           </div>
         </div>
 
-        {/* Chat Area */}
-        <div className="flex-1 bg-gray-50">
+        {/* Chat Area - Takes remaining space */}
+        <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden h-full">
           {selectedUser ? (
             <ChatComponent
               currentUser={user.user}
@@ -349,20 +349,20 @@ const Message = ({ user }) => {
 
   // Mobile view: show either list or chat
   return (
-    <div className="h-screen bg-gray-50 overflow-hidden">
+    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
       {!showChat ? (
-        // Chat List View
-        <div className="h-full flex flex-col">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-5">
+        // Chat List View - Flex column layout
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* FIXED Header - Never scrolls */}
+          <div className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 p-5">
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <MessageCircle className="w-6 h-6" />
               Messages
             </h1>
           </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200 bg-white">
+          {/* FIXED Tabs - Never scrolls */}
+          <div className="flex-shrink-0 flex border-b border-gray-200 bg-white">
             <button
               className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
                 activeTab === "chat"
@@ -391,8 +391,8 @@ const Message = ({ user }) => {
             </button>
           </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
+          {/* SCROLLABLE Content - Only this part scrolls */}
+          <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === "chat" && (
               <ChatList
                 currentUser={user.user}
@@ -484,7 +484,7 @@ const Message = ({ user }) => {
                     <p className="text-gray-600">No follows yet</p>
                   </div>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-2 pb-4">
                     {followingUsers.map((userItem) => (
                       <button
                         key={userItem._id}
@@ -516,8 +516,8 @@ const Message = ({ user }) => {
           </div>
         </div>
       ) : (
-        // Chat View for Mobile
-        <div className="h-full flex flex-col">
+        // Chat View for Mobile - Full height with proper fixed headers
+        <div className="h-full flex flex-col overflow-hidden">
           <ChatComponent
             currentUser={user.user}
             recipientUser={selectedUser}

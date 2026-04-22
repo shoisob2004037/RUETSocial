@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
+import { useState, useEffect, useRef } from "react"
+import { useNavigate, Link } from "react-router-dom"
 import { getTimelinePosts, getAllUsers, getTrendingHashtags, getUser } from "../services/api"
 import CreatePost from "../components/CreatePost"
 import Post from "../components/Post"
@@ -17,6 +17,11 @@ const Home = ({ user }) => {
   const [trendingHashtags, setTrendingHashtags] = useState([])
   const [sharedByUsers, setSharedByUsers] = useState({})
   const navigate = useNavigate()
+
+  // Refs for scrollable sections
+  const leftSectionRef = useRef(null)
+  const centerSectionRef = useRef(null)
+  const rightSectionRef = useRef(null)
 
   useEffect(() => {
     const fetchTrendingHashtags = async () => {
@@ -38,7 +43,6 @@ const Home = ({ user }) => {
         const timelinePosts = await getTimelinePosts(user.user._id)
         console.log("Timeline Posts:", timelinePosts)
 
-        // Process shared posts to get user info
         const sharedUsers = {}
         for (const post of timelinePosts) {
           if (post.sharedBy || (post.shares && post.shares.length > 0)) {
@@ -67,7 +71,6 @@ const Home = ({ user }) => {
 
         setSharedByUsers(sharedUsers)
         setPosts(timelinePosts)
-        setLoading(false)
       } catch (err) {
         setError("Failed to load posts. Please try again later.")
         console.error("Error fetching posts:", err)
@@ -90,7 +93,6 @@ const Home = ({ user }) => {
         const filteredUsers = users.filter((u) => {
           const isNotCurrentUser = u._id !== user.user._id
           const hasSameDepartment = u.department === user.user.department
-          console.log(`User ${u._id}: isNotCurrentUser=${isNotCurrentUser}, hasSameDepartment=${hasSameDepartment}`)
           return isNotCurrentUser && hasSameDepartment
         })
 
@@ -136,43 +138,126 @@ const Home = ({ user }) => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
-      <div className="container mx-auto px-4 py-8 flex-grow">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Main Content (Posts) */}
-          <div className="lg:w-2/3">
-            {/* Create Post Card */}
-            <div className="mb-6">
-              <CreatePost user={user} onPostCreated={handleNewPost} />
+          {/* LEFT SECTION - User Profile Card (Desktop only) */}
+          <div className="hidden lg:block lg:w-1/4 xl:w-1/5">
+            <div
+              ref={leftSectionRef}
+              className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{ scrollbarWidth: 'thin' }}
+            >
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                {/* Profile Header */}
+                <div className="relative">
+                  <div className="h-24 bg-gradient-to-r from-blue-500 to-blue-600"></div>
+                  <div className="px-4 pb-4">
+                    <div className="flex justify-center -mt-12 mb-3">
+                      <img
+                        src={user.user.profilePicture || "https://via.placeholder.com/80"}
+                        alt={`${user.user.firstname} ${user.user.lastname}`}
+                        className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-sm"
+                      />
+                    </div>
+                    <div className="text-center">
+                      <Link to={`/profile/${user.user._id}`}>
+                        <h3 className="font-semibold text-gray-900 hover:text-blue-600">
+                          {user.user.firstname} {user.user.lastname}
+                        </h3>
+                      </Link>
+                      <p className="text-xs text-gray-500 mt-1">{user.user.department || "Student"}</p>
+                      {user.user.livesin && (
+                        <p className="text-xs text-gray-400 mt-1">{user.user.livesin}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Profile Stats */}
+                <div className="border-t border-gray-200 px-4 py-3">
+                  <div className="flex justify-around">
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-900">{user.user.followers?.length || 0}</p>
+                      <p className="text-xs text-gray-500">Followers</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-900">{user.user.following?.length || 0}</p>
+                      <p className="text-xs text-gray-500">Following</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-gray-900">{posts.length}</p>
+                      <p className="text-xs text-gray-500">Posts</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Links */}
+                <div className="border-t border-gray-200">
+                  <Link
+                    to={`/profile/${user.user._id}`}
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span className="text-sm text-gray-700">My Profile</span>
+                  </Link>
+                  <Link
+                    to="/saved"
+                    className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    <span className="text-sm text-gray-700">Saved Posts</span>
+                  </Link>
+                </div>
+              </div>
             </div>
+          </div>
 
-            {/* Posts Section */}
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <LoadingSpinner />
+          {/* CENTER SECTION - Posts Feed */}
+          <div className="lg:flex-1 xl:flex-1">
+            <div
+              ref={centerSectionRef}
+              className="max-h-[calc(100vh-3rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{ scrollbarWidth: 'thin' }}
+            >
+              {/* Create Post */}
+              <div className="mb-5">
+                <CreatePost user={user} onPostCreated={handleNewPost} />
               </div>
-            ) : error ? (
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <p className="text-red-500 text-lg font-semibold">{error}</p>
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-lg p-6 text-center">
-                <p className="text-gray-600 text-lg">
-                  No posts to show. Follow some users or create your first post!
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {posts.map((post) => {
-                  const sharedBy = getSharedByUser(post)
-                  const isShared = !!sharedBy
 
-                  return (
-                    <div
-                      key={post._id}
-                      className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-shadow duration-300"
-                    >
+              {/* Posts Feed */}
+              {loading ? (
+                <div className="flex justify-center items-center py-20">
+                  <LoadingSpinner />
+                </div>
+              ) : error ? (
+                <div className="bg-white rounded-lg border border-gray-200 p-6 text-center">
+                  <svg className="w-12 h-12 text-red-500 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-red-600 font-medium">{error}</p>
+                </div>
+              ) : posts.length === 0 ? (
+                <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                  <p className="text-gray-600 font-medium">No posts to show</p>
+                  <p className="text-gray-400 text-sm mt-1">Follow some users or create your first post!</p>
+                </div>
+              ) : (
+                <div className="space-y-4 pb-6">
+                  {posts.map((post) => {
+                    const sharedBy = getSharedByUser(post)
+                    const isShared = !!sharedBy
+
+                    return (
                       <Post
+                        key={post._id}
                         post={post}
                         currentUser={user.user}
                         onPostUpdate={handlePostUpdate}
@@ -180,77 +265,131 @@ const Home = ({ user }) => {
                         isShared={isShared}
                         sharedBy={sharedBy}
                       />
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Sidebar (User Suggestions & Trending Hashtags) */}
-          <div className="lg:w-1/3">
-            <div className="sticky top-4 space-y-6">
-              {/* User Suggestions Card */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg
-                    className="w-6 h-6 text-teal-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                    />
-                  </svg>
-                  <h3 className="text-xl font-bold text-gray-900">People You May Know</h3>
+          {/* RIGHT SECTION - Suggestions & Hashtags (Desktop) */}
+          <div className="hidden lg:block lg:w-1/3 xl:w-1/4">
+            <div
+              ref={rightSectionRef}
+              className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400"
+              style={{ scrollbarWidth: 'thin' }}
+            >
+              <div className="space-y-5">
+                {/* User Suggestions Card */}
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                      </svg>
+                      <h3 className="font-semibold text-gray-900">People You May Know</h3>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <UserSuggestions users={suggestedUsers} currentUser={user.user} />
+                  </div>
                 </div>
-                <UserSuggestions users={suggestedUsers} currentUser={user.user} />
-              </div>
 
-              {/* Trending Hashtags Card */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <svg
-                    className="w-6 h-6 text-teal-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                    />
-                  </svg>
-                  <h3 className="text-xl font-bold text-gray-900">Trending Hashtags</h3>
+                {/* Trending Hashtags Card */}
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                      </svg>
+                      <h3 className="font-semibold text-gray-900">Trending Hashtags</h3>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    {trendingHashtags.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {trendingHashtags.map((hashtag) => (
+                          <button
+                            key={hashtag._id}
+                            onClick={() => navigate(`/hashtag/${hashtag._id.substring(1)}`)}
+                            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium hover:bg-blue-100 hover:text-blue-600 transition-colors duration-200"
+                          >
+                            <span className="text-blue-500">#</span>
+                            {hashtag._id.substring(1)}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6">
+                        <svg className="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                        <p className="text-gray-500 text-sm">No trending hashtags yet</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {trendingHashtags.length > 0 ? (
-                    trendingHashtags.map((hashtag) => (
-                      <button
-                        key={hashtag._id}
-                        onClick={() => navigate(`/hashtag/${hashtag._id.substring(1)}`)}
-                        className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm font-medium hover:bg-teal-200 transition-colors duration-200 flex items-center gap-1"
-                      >
-                        <span>#</span>
-                        {hashtag._id.substring(1)}
-                      </button>
-                    ))
-                  ) : (
-                    <p className="text-gray-600">No trending hashtags yet</p>
-                  )}
-                </div>
+
+                {/* Footer */}
+                <Footer />
               </div>
             </div>
           </div>
         </div>
       </div>
-      <Footer />
+
+      {/* MOBILE BOTTOM SHEET - User Suggestions (Horizontal Scroll) */}
+      {suggestedUsers.length > 0 && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                </svg>
+                <h3 className="font-semibold text-gray-900 text-sm">People You May Know</h3>
+              </div>
+            </div>
+            
+            {/* Horizontal Scroll Container */}
+            <div className="overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scrollbar-thin scrollbar-thumb-gray-300" style={{ scrollbarWidth: 'thin' }}>
+              <div className="flex gap-3">
+                {suggestedUsers.slice(0, 10).map((suggestedUser) => (
+                  <div key={suggestedUser._id} className="flex-shrink-0 w-28 text-center">
+                    <Link to={`/profile/${suggestedUser._id}`} className="block">
+                      <img
+                        src={suggestedUser.profilePicture || "https://via.placeholder.com/60"}
+                        alt={`${suggestedUser.firstname} ${suggestedUser.lastname}`}
+                        className="w-16 h-16 rounded-full object-cover mx-auto mb-2 border-2 border-gray-200"
+                      />
+                      <p className="font-medium text-gray-900 text-xs truncate">
+                        {suggestedUser.firstname} {suggestedUser.lastname}
+                      </p>
+                      {suggestedUser.department && (
+                        <p className="text-gray-500 text-xs truncate">{suggestedUser.department}</p>
+                      )}
+                    </Link>
+                    <button
+                      onClick={async () => {
+                        // You can implement follow/unfollow logic here
+                        // For now, it just navigates to profile
+                      }}
+                      className="mt-2 px-3 py-1 bg-blue-500 text-white rounded-md text-xs font-medium w-full hover:bg-blue-600 transition-colors"
+                    >
+                      Follow
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add padding bottom on mobile to account for bottom sheet */}
+      <div className="lg:hidden pb-32">
+        <Footer />
+      </div>
     </div>
   )
 }

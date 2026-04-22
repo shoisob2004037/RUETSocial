@@ -66,65 +66,65 @@ const UserSuggestions = ({ users, currentUser }) => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="text-center py-6">
+        <div className="inline-block w-6 h-6 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
+        <p className="text-gray-500 text-sm mt-2">Loading suggestions...</p>
+      </div>
+    );
+  }
+
+  if (!users || users.length === 0) {
+    return (
+      <div className="text-center py-6">
+        <svg className="w-10 h-10 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <p className="text-gray-500 text-sm">No suggestions available</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-white shadow-md rounded-lg mb-3">
-      <div className="p-3 border-b text-gray-800 font-semibold">
-        People From Your Department
-      </div>
-      <div className="p-0">
-        {loading ? (
-          <div className="p-3 text-center text-gray-600">Loading suggestions...</div>
-        ) : (!users || users.length === 0) ? (
-          <div className="p-3 text-center text-gray-600">
-            No suggestions available right now.
-          </div>
-        ) : (
-          users.map((user) => (
-            <div
-              key={user._id}
-              className="flex items-center p-3 border-b last:border-b-0"
+    <div className="space-y-3">
+      {users.map((user) => (
+        <div key={user._id} className="flex items-center gap-3">
+          <img
+            src={user.profilePicture || "https://via.placeholder.com/40"}
+            alt={`${user.firstname} ${user.lastname}`}
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <div className="flex-1 min-w-0">
+            <Link
+              to={`/profile/${user._id}`}
+              className="font-semibold text-gray-900 hover:text-blue-600 text-sm block truncate"
             >
-              <img
-                src={user.profilePicture || "https://via.placeholder.com/40"}
-                alt={`${user.firstname} ${user.lastname}`}
-                className="w-10 h-10 rounded-full mr-2 text-none"
-              />
-              <div className="flex-1">
-                <Link
-                  to={`/profile/${user._id}`}
-                  className="text-gray-800 font-semibold"
-                >
-                  {user.firstname} {user.lastname}
-                </Link>
-                {user.livesin && (
-                  <div className="text-gray-600 text-sm">
-                    Lives in {user.livesin}
-                  </div>
-                )}
-                {user.university && (
-                  <div className="text-gray-600 text-sm">
-                    Studies in {user.university}
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() =>
-                  followingStatus[user._id]
-                    ? handleUnfollow(user._id)
-                    : handleFollow(user._id)
-                }
-                className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                  followingStatus[user._id]
-                    ? "border border-gray-400 text-gray-700 hover:bg-gray-100"
-                    : "bg-blue-500 text-white hover:bg-blue-600"
-                }`}
-              >
-                {followingStatus[user._id] ? "Unfollow" : "Follow"}
-              </button>
-            </div>
-          ))
-        )}
-      </div>
+              {user.firstname} {user.lastname}
+            </Link>
+            {user.livesin && (
+              <p className="text-gray-500 text-xs truncate">{user.livesin}</p>
+            )}
+            {user.university && !user.livesin && (
+              <p className="text-gray-500 text-xs truncate">{user.university}</p>
+            )}
+          </div>
+          <button
+            onClick={() =>
+              followingStatus[user._id]
+                ? handleUnfollow(user._id)
+                : handleFollow(user._id)
+            }
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
+              followingStatus[user._id]
+                ? "border border-gray-300 text-gray-700 hover:bg-gray-50"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          >
+            {followingStatus[user._id] ? "Unfollow" : "Follow"}
+          </button>
+        </div>
+      ))}
     </div>
   );
 };

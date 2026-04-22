@@ -27,18 +27,15 @@ const PostPage = ({ user }) => {
         const postData = await getPost(id)
         setPost(postData)
 
-        // Fetch post author
         const authorId = postData.userId || postData.user?._id
         if (authorId) {
           const authorData = await getUser(authorId)
           setPostAuthor(authorData)
         }
 
-        // Fetch comments
         const commentsData = await getComments(id)
         setComments(commentsData)
 
-        // Fetch comment users
         const userIds = [...new Set(commentsData.map((comment) => comment.userId))]
         const usersData = {}
 
@@ -53,7 +50,6 @@ const PostPage = ({ user }) => {
 
         setCommentUsers(usersData)
 
-        // Check if post is saved
         if (user && user.user) {
           const savedStatus = await isPostSaved(id, user.user._id)
           setIsSaved(savedStatus)
@@ -96,13 +92,11 @@ const PostPage = ({ user }) => {
 
     try {
       setCommentLoading(true)
-      const updatedPost = await addComment(post._id, user.user._id, commentText)
+      await addComment(post._id, user.user._id, commentText)
 
-      // Fetch updated comments
       const updatedComments = await getComments(id)
       setComments(updatedComments)
 
-      // Add current user to comment users if not already there
       if (!commentUsers[user.user._id]) {
         setCommentUsers((prev) => ({
           ...prev,
@@ -111,7 +105,6 @@ const PostPage = ({ user }) => {
       }
 
       setCommentText("")
-      setPost(updatedPost)
     } catch (err) {
       console.error("Error adding comment:", err)
     } finally {
@@ -127,22 +120,29 @@ const PostPage = ({ user }) => {
     }
   }
 
-  if (loading) return <LoadingSpinner />
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <LoadingSpinner />
+        <p className="text-gray-500 mt-3 text-sm">Loading post...</p>
+      </div>
+    )
+  }
 
   if (error) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="bg-white p-8 rounded-xl shadow-lg text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+      <div className="min-h-[60vh] flex items-center justify-center px-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center max-w-md w-full">
+          <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
             <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Post Not Found</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
+          <h2 className="text-xl font-semibold text-gray-800 mb-2">Post Not Found</h2>
+          <p className="text-gray-600 text-sm mb-6">{error}</p>
           <button
             onClick={() => navigate(-1)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
           >
             Go Back
           </button>
@@ -156,53 +156,50 @@ const PostPage = ({ user }) => {
   const isLiked = post.likes?.includes(user?.user?._id)
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
         {/* Post Header */}
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center">
+        <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Link to={`/profile/${postAuthor?._id}`} className="flex-shrink-0">
               <img
-                src={postAuthor?.profilePicture || "https://via.placeholder.com/50"}
+                src={postAuthor?.profilePicture || "https://via.placeholder.com/40"}
                 alt={postAuthor ? `${postAuthor.firstname} ${postAuthor.lastname}` : "User"}
-                className="w-12 h-12 rounded-full object-cover border-2 border-purple-100"
+                className="w-10 h-10 rounded-full object-cover"
               />
             </Link>
-            <div className="ml-4 flex-1">
-              <Link to={`/profile/${postAuthor?._id}`} className="font-semibold text-gray-900 hover:text-purple-700">
+            <div>
+              <Link to={`/profile/${postAuthor?._id}`} className="font-semibold text-gray-900 hover:text-blue-600 text-sm">
                 {postAuthor ? `${postAuthor.firstname} ${postAuthor.lastname}` : "Unknown User"}
               </Link>
-              <div className="flex items-center text-sm text-gray-500">
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-0.5">
                 <span>{formatTimestamp(post.createdAt)}</span>
                 {postAuthor?.department && (
-                  <>
-                    <span className="mx-1">•</span>
-                    <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs">
-                      {postAuthor.department}
-                    </span>
-                  </>
+                  <span className="px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">
+                    {postAuthor.department}
+                  </span>
                 )}
               </div>
             </div>
-            <button
-              onClick={() => navigate(-1)}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
-              aria-label="Go back"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label="Go back"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Post Image */}
         {post.image && (
-          <div className="relative bg-gray-100">
+          <div className="bg-gray-50 border-b border-gray-200">
             <img
               src={post.image || "/placeholder.svg"}
               alt={post.desc || "Post image"}
-              className="w-full max-h-[600px] object-contain"
+              className="w-full max-h-[500px] object-contain"
               onError={(e) => {
                 e.target.onerror = null
                 e.target.src = "https://via.placeholder.com/800x600?text=Image+Not+Available"
@@ -212,8 +209,12 @@ const PostPage = ({ user }) => {
         )}
 
         {/* Post Content */}
-        <div className="p-6">
-          {post.desc && <p className="text-gray-800 text-lg mb-4 whitespace-pre-line">{post.desc}</p>}
+        <div className="px-4 py-4">
+          {post.desc && (
+            <p className="text-gray-800 text-base leading-relaxed whitespace-pre-line mb-4">
+              {post.desc}
+            </p>
+          )}
 
           {/* Tags */}
           {post.tags && post.tags.length > 0 && (
@@ -222,7 +223,7 @@ const PostPage = ({ user }) => {
                 <Link
                   key={index}
                   to={`/hashtag/${tag.substring(1)}`}
-                  className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm hover:bg-purple-200 transition-colors"
+                  className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-xs font-medium hover:bg-blue-100 hover:text-blue-600 transition-colors"
                 >
                   {tag}
                 </Link>
@@ -232,18 +233,10 @@ const PostPage = ({ user }) => {
 
           {/* Post Stats */}
           <div className="flex items-center justify-between py-3 border-t border-b border-gray-100 my-4">
-            <div className="flex items-center space-x-2">
-              <div className="flex -space-x-1">
-                <div className="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path
-                      fillRule="evenodd"
-                      d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
-              </div>
+            <div className="flex items-center gap-2">
+              <svg className="w-4 h-4 text-red-500" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+              </svg>
               <span className="text-sm text-gray-600">
                 {post.likes?.length || 0} {post.likes?.length === 1 ? "like" : "likes"}
               </span>
@@ -254,35 +247,27 @@ const PostPage = ({ user }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between mb-6">
+          <div className="flex gap-2 mb-6">
             <button
               onClick={handleLike}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                isLiked ? "text-pink-600 bg-pink-50 hover:bg-pink-100" : "text-gray-600 hover:bg-gray-100"
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                isLiked
+                  ? "text-red-500 bg-red-50 hover:bg-red-100"
+                  : "text-gray-600 hover:text-red-500 hover:bg-gray-50"
               }`}
             >
-              <svg className={`w-5 h-5 ${isLiked ? "fill-current" : "stroke-current fill-none"}`} viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-                />
+              <svg className="w-5 h-5" fill={isLiked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
               </svg>
               <span>{isLiked ? "Liked" : "Like"}</span>
             </button>
 
             <button
-              onClick={() => document.getElementById("comment-input").focus()}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+              onClick={() => document.getElementById("comment-input")?.focus()}
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               <span>Comment</span>
             </button>
@@ -290,25 +275,17 @@ const PostPage = ({ user }) => {
             <button
               onClick={handleSave}
               disabled={saveLoading}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
-                isSaved ? "text-blue-600 bg-blue-50 hover:bg-blue-100" : "text-gray-600 hover:bg-gray-100"
+              className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
+                isSaved
+                  ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                  : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
               }`}
             >
               {saveLoading ? (
                 <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></div>
               ) : (
-                <svg
-                  className="w-5 h-5"
-                  fill={isSaved ? "currentColor" : "none"}
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"
-                  />
+                <svg className="w-5 h-5" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
                 </svg>
               )}
               <span>{isSaved ? "Saved" : "Save"}</span>
@@ -317,15 +294,15 @@ const PostPage = ({ user }) => {
 
           {/* Comments Section */}
           <div className="mt-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Comments</h3>
+            <h3 className="font-semibold text-gray-900 mb-4 text-sm">Comments</h3>
 
             {/* Comment Form */}
             <form onSubmit={handleComment} className="mb-6">
-              <div className="flex items-start space-x-3">
+              <div className="flex gap-3">
                 <img
-                  src={user?.user?.profilePicture || "https://via.placeholder.com/40"}
+                  src={user?.user?.profilePicture || "https://via.placeholder.com/32"}
                   alt={user?.user ? `${user.user.firstname} ${user.user.lastname}` : "User"}
-                  className="w-10 h-10 rounded-full object-cover"
+                  className="w-8 h-8 rounded-full object-cover"
                 />
                 <div className="flex-1 relative">
                   <textarea
@@ -333,26 +310,16 @@ const PostPage = ({ user }) => {
                     value={commentText}
                     onChange={(e) => setCommentText(e.target.value)}
                     placeholder="Write a comment..."
-                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none min-h-[80px]"
+                    className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                    rows="3"
                     required
                   />
                   <button
                     type="submit"
                     disabled={commentLoading || !commentText.trim()}
-                    className="absolute bottom-3 right-3 p-2 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="absolute bottom-2 right-2 px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {commentLoading ? (
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth="2"
-                          d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                        />
-                      </svg>
-                    )}
+                    {commentLoading ? "Posting..." : "Post"}
                   </button>
                 </div>
               </div>
@@ -360,47 +327,40 @@ const PostPage = ({ user }) => {
 
             {/* Comments List */}
             {comments.length === 0 ? (
-              <div className="text-center py-8 bg-gray-50 rounded-lg">
-                <svg className="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                  />
+              <div className="text-center py-8 bg-gray-50 rounded-md">
+                <svg className="w-10 h-10 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                 </svg>
-                <p className="mt-2 text-gray-600">No comments yet. Be the first to comment!</p>
+                <p className="mt-2 text-gray-500 text-sm">No comments yet. Be the first!</p>
               </div>
             ) : (
               <div className="space-y-4">
                 {comments.map((comment) => {
                   const commentUser = commentUsers[comment.userId] || {}
                   return (
-                    <div key={comment._id} className="flex space-x-3">
+                    <div key={comment._id} className="flex gap-3">
                       <Link to={`/profile/${comment.userId}`} className="flex-shrink-0">
                         <img
-                          src={commentUser.profilePicture || "https://via.placeholder.com/40"}
+                          src={commentUser.profilePicture || "https://via.placeholder.com/32"}
                           alt={commentUser.firstname ? `${commentUser.firstname} ${commentUser.lastname}` : "User"}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-8 h-8 rounded-full object-cover"
                         />
                       </Link>
                       <div className="flex-1">
-                        <div className="bg-gray-50 p-3 rounded-lg">
+                        <div className="bg-gray-50 p-3 rounded-md">
                           <Link
                             to={`/profile/${comment.userId}`}
-                            className="font-medium text-gray-900 hover:text-purple-700"
+                            className="font-semibold text-gray-900 hover:text-blue-600 text-xs"
                           >
                             {commentUser.firstname
                               ? `${commentUser.firstname} ${commentUser.lastname}`
                               : "Unknown User"}
                           </Link>
-                          <p className="text-gray-800 mt-1">{comment.content}</p>
+                          <p className="text-gray-700 text-sm mt-1">{comment.content}</p>
                         </div>
-                        <div className="flex items-center mt-1 text-xs text-gray-500">
-                          <span>{formatTimestamp(comment.createdAt)}</span>
-                          <button className="ml-3 hover:text-purple-700">Like</button>
-                          <button className="ml-3 hover:text-purple-700">Reply</button>
-                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {formatTimestamp(comment.createdAt)}
+                        </p>
                       </div>
                     </div>
                   )

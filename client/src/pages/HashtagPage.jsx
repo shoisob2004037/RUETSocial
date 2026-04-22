@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { Row, Col, Card, Alert, Button, Badge } from 'react-bootstrap';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { getPostsByHashtag } from '../services/api';
 import Post from '../components/Post';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const HashtagPage = ({ user }) => {
     const { tag } = useParams();
+    const navigate = useNavigate();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -33,66 +33,85 @@ const HashtagPage = ({ user }) => {
         fetchPosts();
     }, [tag]);
 
+    if (loading) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center">
+                <LoadingSpinner />
+                <p className="text-gray-500 mt-3 text-sm">Loading posts...</p>
+            </div>
+        );
+    }
+
     return (
-        <div className="hashtag-page">
-            <div className="hashtag-header text-center py-4">
-                <h1 className="hashtag-title mb-3">
-                    #{tag} 
-                    {posts.length > 0 && (
-                        <Badge bg="light" text="dark" className="ms-2 fs-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+            {/* Header */}
+            <div className="bg-white rounded-lg border border-gray-200 mb-6 overflow-hidden">
+                <div className="px-6 py-8 text-center">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-50 rounded-full mb-4">
+                        <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                    </div>
+                    <h1 className="text-2xl lg:text-3xl font-bold text-gray-900 mb-2">
+                        <span className="text-blue-500">#</span>{tag}
+                    </h1>
+                    <div className="flex items-center justify-center gap-2">
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md text-sm font-medium">
                             {posts.length} {posts.length === 1 ? 'post' : 'posts'}
-                        </Badge>
-                    )}
-                </h1>
-                <p className="text-muted">Posts tagged with #{tag}</p>
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {loading ? (
-                <div className="text-center py-5">
-                    <LoadingSpinner />
-                    <p className="mt-3">Loading posts...</p>
+            {/* Error State */}
+            {error && (
+                <div className="bg-white rounded-lg border border-red-200 p-8 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <p className="text-red-600 font-medium mb-4">{error}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+                    >
+                        Try Again
+                    </button>
                 </div>
-            ) : error ? (
-                <Card className="error-card my-4">
-                    <Card.Body className="text-center py-4">
-                        <Alert variant="danger" className="mb-0">
-                            <p className="mb-3">{error}</p>
-                            <Button 
-                                variant="outline-danger" 
-                                onClick={() => window.location.reload()}
-                                size="sm"
-                            >
-                                Try Again
-                            </Button>
-                        </Alert>
-                    </Card.Body>
-                </Card>
-            ) : posts.length === 0 ? (
-                <Card className="no-posts-card my-4">
-                    <Card.Body className="text-center py-5">
-                        <div className="empty-state-icon mb-3">
-                            <i className="bi bi-hash fs-1 text-muted"></i>
-                        </div>
-                        <h5 className="mb-3">No posts found with #{tag}</h5>
-                        <p className="text-muted small">
-                            This hashtag doesn't have any posts yet. Be the first to use it!
-                        </p>
-                    </Card.Body>
-                </Card>
-            ) : (
-                <div className="posts-container">
-                    <Row className="justify-content-center">
-                        <Col lg={8} xxl={6}>
-                            {posts.map(post => (
-                                <div key={post._id} className="post-wrapper mb-4">
-                                    <Post 
-                                        post={post} 
-                                        currentUser={user?.user} 
-                                    />
-                                </div>
-                            ))}
-                        </Col>
-                    </Row>
+            )}
+
+            {/* Empty State */}
+            {!error && posts.length === 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+                    <svg className="w-20 h-20 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">No posts found</h3>
+                    <p className="text-gray-500 text-sm">
+                        No posts have been tagged with <span className="font-medium text-blue-600">#{tag}</span> yet.
+                        <br />
+                        Be the first to use this hashtag!
+                    </p>
+                    <button
+                        onClick={() => navigate('/')}
+                        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm font-medium"
+                    >
+                        Go to Feed
+                    </button>
+                </div>
+            )}
+
+            {/* Posts Feed */}
+            {!error && posts.length > 0 && (
+                <div className="space-y-4">
+                    {posts.map((post) => (
+                        <Post
+                            key={post._id}
+                            post={post}
+                            currentUser={user?.user}
+                        />
+                    ))}
                 </div>
             )}
         </div>

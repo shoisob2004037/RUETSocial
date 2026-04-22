@@ -133,78 +133,74 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
     setSaveLoading(false)
   }
 
-  if (!postUser) return <div className="text-center text-gray-600 py-8">Loading...</div>
+  if (!postUser) return <div className="text-center text-gray-500 py-8">Loading...</div>
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden">
+      <div className="bg-white rounded-lg border border-gray-200 mb-4 overflow-hidden">
         {/* Shared Post Indicator */}
         {isShared && sharedBy && (
-          <div className="px-5 pt-4 pb-2 bg-gradient-to-r from-teal-50 to-green-50 border-b border-teal-100 flex items-center">
-            <svg className="w-4 h-4 mr-2 text-teal-700" fill="currentColor" viewBox="0 0 24 24">
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center text-sm">
+            <svg className="w-4 h-4 mr-2 text-gray-500" fill="currentColor" viewBox="0 0 24 24">
               <path d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
-            <Link to={`/profile/${sharedBy._id}`} className="text-teal-700 hover:underline font-semibold text-sm">
+            <Link to={`/profile/${sharedBy._id}`} className="text-gray-700 hover:text-blue-600 font-medium">
               {sharedBy.firstname} {sharedBy.lastname}
             </Link>
-            <span className="ml-2 text-gray-600 text-sm">saved this post</span>
+            <span className="ml-1 text-gray-500">saved this post</span>
           </div>
         )}
 
         {/* Post Header */}
-        <div className="px-6 py-5 bg-gradient-to-r from-teal-600 to-green-700 text-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img
-                src={postUser.profilePicture || "https://via.placeholder.com/50"}
-                alt={`${postUser.firstname} ${postUser.lastname}`}
-                className="w-14 h-14 rounded-full object-cover border-3 border-white shadow-md"
-              />
-              <div>
-                <Link to={`/profile/${postUser._id}`} className="text-white font-bold text-lg hover:text-gray-100 transition-colors">
-                  {postUser.firstname} {postUser.lastname}
-                </Link>
-                <p className="text-teal-100 text-xs mt-1 font-medium">
-                  {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
-                </p>
+        <div className="px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img
+              src={postUser.profilePicture || "https://via.placeholder.com/40"}
+              alt={`${postUser.firstname} ${postUser.lastname}`}
+              className="w-10 h-10 rounded-full object-cover"
+            />
+            <div>
+              <Link to={`/profile/${postUser._id}`} className="font-semibold text-gray-900 hover:text-blue-600 text-sm">
+                {postUser.firstname} {postUser.lastname}
+              </Link>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}
+              </p>
+            </div>
+          </div>
+          {isOwnPost && !post.virtual && (
+            <div className="relative">
+              <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                </svg>
+              </button>
+              <div className="absolute right-0 mt-2 w-36 bg-white shadow-lg rounded-md hidden group-hover:block z-10 border border-gray-200">
+                <button
+                  onClick={handleEditPost}
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setShowDeleteConfirmation(true)}
+                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-50"
+                >
+                  Delete
+                </button>
               </div>
             </div>
-            {isOwnPost && !post.virtual && (
-              <div className="relative group">
-                <button className="text-white hover:text-gray-100 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-all">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                  </svg>
-                </button>
-                <div className="absolute right-0 mt-2 w-40 bg-white shadow-xl rounded-lg hidden group-hover:block z-10">
-                  <button
-                    onClick={handleEditPost}
-                    className="block w-full text-left px-4 py-3 text-gray-700 hover:bg-teal-50 hover:text-teal-700 transition-colors font-medium text-sm border-b border-gray-100"
-                  >
-                    ✏️ Edit Post
-                  </button>
-                  <button
-                    onClick={() => setShowDeleteConfirmation(true)}
-                    className="block w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors font-medium text-sm"
-                  >
-                    🗑️ Delete Post
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
-        {/* Post Content - ENHANCED */}
-        <div className="px-6 py-6 bg-white">
-          {/* Post Description/Caption - LARGER & BOLDER */}
-          <p className="text-gray-800 text-lg leading-relaxed font-semibold mb-5 whitespace-pre-wrap">
+        {/* Post Content */}
+        <div className="px-4 pb-3">
+          <p className="text-gray-800 text-base leading-relaxed whitespace-pre-wrap">
             {customDescription || post.desc}
           </p>
           
-          {/* Post Image */}
           {post.image && (
-            <div className="mt-4 -mx-6 mb-0">
+            <div className="mt-3 -mx-4">
               <img
                 src={post.image || "https://via.placeholder.com/500"}
                 alt="Post"
@@ -215,30 +211,28 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
           )}
         </div>
 
-        {/* Post Stats Bar */}
-        <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-          <div className="flex justify-between text-sm">
-            <button
-              onClick={handleShowLikers}
-              disabled={likesCount === 0}
-              className="text-gray-600 hover:text-teal-700 disabled:text-gray-400 font-medium transition-colors"
-            >
-              ❤️ {likesCount} {likesCount === 1 ? 'like' : 'likes'}
-            </button>
-            <span className="text-gray-600 font-medium">
-              💬 {post.comments?.length || 0} {post.comments?.length === 1 ? 'comment' : 'comments'}
-            </span>
-          </div>
+        {/* Post Stats */}
+        <div className="px-4 py-2 border-t border-gray-100 flex justify-between text-sm">
+          <button
+            onClick={handleShowLikers}
+            disabled={likesCount === 0}
+            className="text-gray-500 hover:text-red-500 disabled:text-gray-300 transition-colors"
+          >
+            {likesCount} {likesCount === 1 ? 'like' : 'likes'}
+          </button>
+          <span className="text-gray-500">
+            {post.comments?.length || 0} {post.comments?.length === 1 ? 'comment' : 'comments'}
+          </span>
         </div>
 
         {/* Post Actions */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-between gap-2">
+        <div className="px-4 py-2 border-t border-gray-100 flex gap-1">
           <button
             onClick={handleLike}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-semibold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
               liked
-                ? "bg-red-100 text-red-600 hover:bg-red-200"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "text-red-500 bg-red-50 hover:bg-red-100"
+                : "text-gray-600 hover:text-red-500 hover:bg-gray-50"
             }`}
           >
             <svg className="w-5 h-5" fill={liked ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
@@ -249,7 +243,7 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
           
           <button
             onClick={handleLoadComments}
-            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+            className="flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-gray-50 transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
@@ -260,10 +254,10 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
           <button
             onClick={handleSavePost}
             disabled={saveLoading}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-lg font-semibold transition-all duration-200 ${
+            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-sm font-medium transition-colors ${
               isSaved
-                ? "bg-teal-100 text-teal-700 hover:bg-teal-200"
-                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                ? "text-blue-600 bg-blue-50 hover:bg-blue-100"
+                : "text-gray-600 hover:text-blue-600 hover:bg-gray-50"
             }`}
           >
             <svg className="w-5 h-5" fill={isSaved ? "currentColor" : "none"} stroke="currentColor" viewBox="0 0 24 24">
@@ -275,31 +269,31 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
 
         {/* Comments Section */}
         {showComments && (
-          <div className="px-6 pb-6 pt-4 border-t border-gray-200 bg-gray-50">
+          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
             {loading ? (
-              <p className="text-center text-gray-600 text-sm py-4">Loading comments...</p>
+              <p className="text-center text-gray-500 text-sm py-4">Loading comments...</p>
             ) : comments.length === 0 ? (
-              <p className="text-center text-gray-600 text-sm py-4">No comments yet. Be the first!</p>
+              <p className="text-center text-gray-500 text-sm py-4">No comments yet.</p>
             ) : (
-              <div className="space-y-4 mb-5">
+              <div className="space-y-3 mb-4">
                 {comments.map((comment) => {
                   const commentUser = commentUsers[comment.userId]
                   const isOwnComment = comment.userId === currentUser._id
                   const isPostOwner = post.userId === currentUser._id
 
                   return (
-                    <div key={comment._id} className="flex gap-3">
+                    <div key={comment._id} className="flex gap-2">
                       <img
                         src={commentUser?.profilePicture || "https://via.placeholder.com/32"}
                         alt={commentUser?.firstname || "User"}
-                        className="w-9 h-9 rounded-full mt-0.5 object-cover"
+                        className="w-8 h-8 rounded-full object-cover"
                       />
                       <div className="flex-1">
-                        <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-100">
-                          <div className="flex justify-between items-start mb-2">
+                        <div className="bg-white p-2 rounded-md border border-gray-200">
+                          <div className="flex justify-between items-start mb-1">
                             <Link
                               to={`/profile/${commentUser?._id}`}
-                              className="text-gray-800 font-bold text-sm hover:underline"
+                              className="text-gray-900 font-semibold text-xs hover:underline"
                             >
                               {commentUser ? `${commentUser.firstname} ${commentUser.lastname}` : "User"}
                             </Link>
@@ -308,14 +302,14 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
                                 {isOwnComment && editingCommentId !== comment._id && (
                                   <button
                                     onClick={() => handleEditComment(comment)}
-                                    className="text-teal-700 hover:text-teal-800 text-xs font-semibold hover:underline"
+                                    className="text-gray-500 hover:text-blue-600 text-xs"
                                   >
                                     Edit
                                   </button>
                                 )}
                                 <button
                                   onClick={() => handleDeleteComment(comment._id)}
-                                  className="text-red-600 hover:text-red-700 text-xs font-semibold hover:underline"
+                                  className="text-gray-500 hover:text-red-600 text-xs"
                                 >
                                   Delete
                                 </button>
@@ -323,29 +317,29 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
                             )}
                           </div>
                           {editingCommentId === comment._id ? (
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 mt-1">
                               <input
                                 value={editedCommentContent}
                                 onChange={(e) => setEditedCommentContent(e.target.value)}
-                                className="flex-1 p-2 border border-teal-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm"
+                                className="flex-1 p-1.5 border border-gray-300 rounded text-sm focus:outline-none focus:border-blue-500"
                               />
                               <button
                                 onClick={() => handleSaveEditComment(comment._id)}
-                                className="px-3 py-1 bg-teal-600 text-white text-xs font-semibold rounded-lg hover:bg-teal-700 transition-colors"
+                                className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
                               >
                                 Save
                               </button>
                               <button
                                 onClick={() => setEditingCommentId(null)}
-                                className="px-3 py-1 bg-gray-300 text-gray-700 text-xs font-semibold rounded-lg hover:bg-gray-400 transition-colors"
+                                className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded hover:bg-gray-300"
                               >
                                 Cancel
                               </button>
                             </div>
                           ) : (
-                            <p className="text-gray-700 text-sm font-medium">{comment.content}</p>
+                            <p className="text-gray-700 text-sm">{comment.content}</p>
                           )}
-                          <p className="text-gray-500 text-xs mt-2 font-medium">
+                          <p className="text-gray-400 text-xs mt-1">
                             {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
                           </p>
                         </div>
@@ -356,23 +350,22 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
               </div>
             )}
             
-            {/* Add Comment Form */}
-            <form onSubmit={handleAddComment} className="flex items-center gap-3 bg-white p-3 rounded-lg border border-gray-200">
+            <form onSubmit={handleAddComment} className="flex items-center gap-2">
               <img
                 src={currentUser.profilePicture || "https://via.placeholder.com/32"}
                 alt="You"
-                className="w-9 h-9 rounded-full object-cover"
+                className="w-8 h-8 rounded-full object-cover"
               />
               <input
                 type="text"
-                placeholder="Add a comment..."
+                placeholder="Write a comment..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
-                className="flex-1 bg-gray-100 px-4 py-2 rounded-full focus:outline-none focus:ring-2 focus:ring-teal-500 text-sm font-medium"
+                className="flex-1 bg-white px-3 py-1.5 rounded-full border border-gray-200 focus:outline-none focus:border-blue-500 text-sm"
               />
               <button
                 type="submit"
-                className="px-5 py-2 bg-gradient-to-r from-teal-600 to-green-700 text-white rounded-full hover:from-teal-700 hover:to-green-800 transition-all font-bold text-sm"
+                className="px-4 py-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-medium"
               >
                 Post
               </button>
@@ -404,12 +397,12 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
       {/* Likers Modal */}
       {showLikersModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-            <div className="flex justify-between items-center mb-5">
-              <h3 className="text-2xl font-bold text-gray-800">❤️ Who Liked This</h3>
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Likes</h3>
               <button
                 onClick={() => setShowLikersModal(false)}
-                className="text-gray-500 hover:text-gray-700 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                className="text-gray-400 hover:text-gray-600"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
@@ -417,27 +410,27 @@ const Post = ({ post, currentUser, customDescription, onPostUpdate, onPostDelete
               </button>
             </div>
             {likers.length === 0 ? (
-              <p className="text-center text-gray-600 text-sm py-8">No likes yet.</p>
+              <p className="text-center text-gray-500 py-8">No likes yet.</p>
             ) : (
-              <ul className="space-y-3 max-h-96 overflow-y-auto">
+              <ul className="max-h-96 overflow-y-auto">
                 {likers.map((liker) => (
-                  <li key={liker._id} className="flex items-center p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                  <li key={liker._id} className="flex items-center p-3 hover:bg-gray-50">
                     <img
                       src={liker.profilePicture || "https://via.placeholder.com/40"}
                       alt={liker.firstname}
                       className="w-10 h-10 rounded-full mr-3 object-cover"
                     />
-                    <Link to={`/profile/${liker._id}`} className="text-gray-800 hover:text-teal-700 font-bold transition-colors">
+                    <Link to={`/profile/${liker._id}`} className="text-gray-900 font-medium hover:text-blue-600">
                       {liker.firstname} {liker.lastname}
                     </Link>
                   </li>
                 ))}
               </ul>
             )}
-            <div className="mt-5 flex justify-end">
+            <div className="p-4 border-t border-gray-200 flex justify-end">
               <button
                 onClick={() => setShowLikersModal(false)}
-                className="px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-semibold"
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium"
               >
                 Close
               </button>
