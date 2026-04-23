@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -129,16 +130,15 @@ const Message = ({ user }) => {
   // Desktop view: show both sidebar and chat
   if (!isMobile) {
     return (
-      <div className="h-screen flex bg-gray-50 overflow-hidden">
+      <div className="h-[calc(100dvh-200px)] flex bg-gray-50 overflow-hidden">
         {/* Sidebar - Full height with flex column */}
         <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-lg h-full overflow-hidden">
           {/* FIXED Header - Never scrolls */}
-          <div className="flex-shrink-0 p-5 border-b border-gray-200 bg-gradient-to-r from-purple-600 to-indigo-600">
+          <div className="flex-shrink-0 p-5 border-b border-gray-200 bg-gradient-to-r from-green-600 to-indigo-600">
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <MessageCircle className="w-6 h-6" />
               Messages
             </h1>
-            <p className="text-purple-100 text-sm mt-1">Connect with your friends</p>
           </div>
 
           {/* FIXED Tabs - Never scrolls */}
@@ -349,12 +349,12 @@ const Message = ({ user }) => {
 
   // Mobile view: show either list or chat
   return (
-    <div className="h-screen bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-[calc(100dvh-200px)] bg-gray-50 flex flex-col overflow-hidden">
       {!showChat ? (
         // Chat List View - Flex column layout
         <div className="flex flex-col h-full overflow-hidden">
           {/* FIXED Header - Never scrolls */}
-          <div className="flex-shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 p-5">
+          <div className="flex-shrink-0 bg-gradient-to-r from-green-600 to-indigo-600 p-5">
             <h1 className="text-2xl font-bold text-white flex items-center gap-2">
               <MessageCircle className="w-6 h-6" />
               Messages

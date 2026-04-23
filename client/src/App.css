@@ -117,3 +117,9 @@ body {
   background: #d1d5db;
   border-radius: 10px;
 }
+
+.edit-profile-select,
+.edit-profile-select option {
+  background: #ffffff !important;
+  color: #111827 !important;
+}

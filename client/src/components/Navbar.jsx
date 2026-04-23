@@ -693,7 +693,7 @@ const Navbar = ({ user, setUser }) => {
                     </div>
                   </div>
 
-                  <div className="py-1 border-b border-gray-100">
+                  <div className="py-1 border-b border-gray-100 no-underline ">
                     <Link
                       to={`/profile/${user.user._id}`}
                       className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-purple-50 hover:text-purple-700"
@@ -709,7 +709,7 @@ const Navbar = ({ user, setUser }) => {
                           />
                         </svg>
                       </div>
-                      <span className="no-underline">My Profile</span>
+                      <span>My Profile</span>
                     </Link>
 
                     <button
