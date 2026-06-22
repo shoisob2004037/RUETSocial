@@ -759,3 +759,15 @@ export const getMutualFollowers = async (userId) => {
   const res = await api.get(`/communities/mutual/${userId}`);
   return res.data;
 };
+export const getCommunityMembers = async (id) => {
+  const api = createAxiosInstance();
+  const res = await api.get(`/communities/${id}/members`);
+  return res.data;
+};
+export const removeCommunityMember = async (id, currentUserId, targetUserId) => {
+  const api = createAxiosInstance();
+  const res = await api.delete(`/communities/${id}/members`, {
+    data: { currentUserId, targetUserId },
+  });
+  return res.data;
+};

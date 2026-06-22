@@ -18,6 +18,25 @@ const areMutualFollowers = async (idA, idB) => {
   return aFollowsB && bFollowsA;
 };
 
+const isAdmin = (community, userId) =>
+  (community.admins || []).map(String).includes(String(userId)) ||
+  String(community.createdBy) === String(userId);
+
+// Populate member docs (id/name/avatar/department) for the picker UI.
+const populateMembers = async (community) => {
+  const users = await UserModel.find({ _id: { $in: community.members } })
+    .select("firstname lastname profilePicture department");
+  return users.map((u) => ({
+    _id: u._id,
+    firstname: u.firstname,
+    lastname: u.lastname,
+    profilePicture: u.profilePicture,
+    department: u.department,
+    isAdmin: (community.admins || []).map(String).includes(String(u._id)),
+    isCreator: String(community.createdBy) === String(u._id),
+  }));
+};
+
 export const getUserCommunities = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -37,6 +56,22 @@ export const getCommunity = async (req, res) => {
     if (!community) return res.status(404).json({ message: "Not found" });
     res.status(200).json(community);
   } catch (e) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const getCommunityMembers = async (req, res) => {
+  try {
+    const community = await CommunityModel.findById(req.params.id);
+    if (!community) return res.status(404).json({ message: "Not found" });
+    const members = await populateMembers(community);
+    res.status(200).json({
+      members,
+      createdBy: community.createdBy,
+      admins: community.admins,
+    });
+  } catch (e) {
+    console.error(e);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -62,8 +97,7 @@ export const createCommunity = async (req, res) => {
   }
 };
 
-// Add a member — only allowed if requester (currentUserId) and target are
-// mutual followers, and requester is already a member of the community.
+// Admin-only: add a member who is a mutual follower of the requesting admin.
 export const addMember = async (req, res) => {
   try {
     const { id } = req.params;
@@ -73,8 +107,8 @@ export const addMember = async (req, res) => {
 
     const community = await CommunityModel.findById(id);
     if (!community) return res.status(404).json({ message: "Not found" });
-    if (!community.members.map(String).includes(String(currentUserId)))
-      return res.status(403).json({ message: "You must be a member to add others" });
+    if (!isAdmin(community, currentUserId))
+      return res.status(403).json({ message: "Only admins can add members" });
     if (community.members.map(String).includes(String(targetUserId)))
       return res.status(400).json({ message: "User is already a member" });
 
@@ -82,9 +116,38 @@ export const addMember = async (req, res) => {
     if (!mutual)
       return res
         .status(403)
-        .json({ message: "Only mutual followers can be added" });
+        .json({ message: "You can only add people who follow you back" });
 
     community.members.push(targetUserId);
+    await community.save();
+    res.status(200).json(community);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// Admin-only: remove a member. Creator cannot be removed.
+export const removeMember = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { currentUserId, targetUserId } = req.body;
+    if (!currentUserId || !targetUserId)
+      return res.status(400).json({ message: "Missing user ids" });
+
+    const community = await CommunityModel.findById(id);
+    if (!community) return res.status(404).json({ message: "Not found" });
+    if (!isAdmin(community, currentUserId))
+      return res.status(403).json({ message: "Only admins can remove members" });
+    if (String(community.createdBy) === String(targetUserId))
+      return res.status(400).json({ message: "Creator cannot be removed" });
+
+    community.members = community.members.filter(
+      (m) => String(m) !== String(targetUserId)
+    );
+    community.admins = community.admins.filter(
+      (m) => String(m) !== String(targetUserId)
+    );
     await community.save();
     res.status(200).json(community);
   } catch (e) {

@@ -192,6 +192,51 @@ export const setupSocketServer = (server) => {
       }
     });
 
+    // ---------------- Community (group) real-time ----------------
+    socket.on("join_community", (communityId) => {
+      if (!communityId) return;
+      socket.join(`community:${communityId}`);
+    });
+
+    socket.on("leave_community", (communityId) => {
+      if (!communityId) return;
+      socket.leave(`community:${communityId}`);
+    });
+
+    socket.on("community_message", ({ communityId, message }) => {
+      if (!communityId || !message) return;
+      // Broadcast to everyone in the room EXCEPT the sender (sender already
+      // appended optimistically via REST response).
+      socket.to(`community:${communityId}`).emit("community_message", {
+        communityId,
+        message,
+      });
+    });
+
+    socket.on("community_typing", ({ communityId, userId, userName }) => {
+      if (!communityId) return;
+      socket.to(`community:${communityId}`).emit("community_typing", {
+        communityId,
+        userId,
+        userName,
+      });
+    });
+
+    socket.on("community_stop_typing", ({ communityId, userId }) => {
+      if (!communityId) return;
+      socket.to(`community:${communityId}`).emit("community_stop_typing", {
+        communityId,
+        userId,
+      });
+    });
+
+    socket.on("community_members_changed", ({ communityId }) => {
+      if (!communityId) return;
+      socket.to(`community:${communityId}`).emit("community_members_changed", {
+        communityId,
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log(`User disconnected: ${socket.id}`);
       let disconnectedUserId = null;

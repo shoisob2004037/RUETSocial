@@ -131,13 +131,13 @@ const Message = ({ user }) => {
   // Desktop view: show both sidebar and chat
   if (!isMobile) {
     return (
-      <div className="h-[calc(100dvh-200px)] flex bg-gray-50 overflow-hidden">
+      <div className="h-[calc(100dvh-64px)] flex bg-gray-50 overflow-hidden">
         {/* Sidebar - Full height with flex column */}
         <div className="w-96 bg-white border-r border-gray-200 flex flex-col shadow-lg h-full overflow-hidden">
           {/* FIXED Header - Never scrolls */}
-          <div className="flex-shrink-0 p-5 border-b border-gray-200 bg-gradient-to-r from-green-600 to-indigo-600">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <MessageCircle className="w-6 h-6" />
+          <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-600 to-indigo-600">
+            <h1 className="text-lg font-bold text-white flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
               Messages
             </h1>
           </div>
@@ -369,14 +369,14 @@ const Message = ({ user }) => {
 
   // Mobile view: show either list or chat
   return (
-    <div className="h-[calc(100dvh-200px)] bg-gray-50 flex flex-col overflow-hidden">
+    <div className="h-[calc(100dvh-64px)] bg-gray-50 flex flex-col overflow-hidden">
       {!showChat ? (
         // Chat List View - Flex column layout
         <div className="flex flex-col h-full overflow-hidden">
           {/* FIXED Header - Never scrolls */}
-          <div className="flex-shrink-0 bg-gradient-to-r from-green-600 to-indigo-600 p-5">
-            <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-              <MessageCircle className="w-6 h-6" />
+          <div className="flex-shrink-0 bg-gradient-to-r from-green-600 to-indigo-600 px-4 py-3">
+            <h1 className="text-lg font-bold text-white flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
               Messages
             </h1>
           </div>
@@ -384,7 +384,7 @@ const Message = ({ user }) => {
           {/* FIXED Tabs - Never scrolls */}
           <div className="flex-shrink-0 flex border-b border-gray-200 bg-white">
             <button
-              className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2.5 text-center font-semibold text-sm transition-all duration-200 ${
                 activeTab === "chat"
                   ? "text-purple-600 border-b-2 border-purple-600"
                   : "text-gray-500"
@@ -397,7 +397,7 @@ const Message = ({ user }) => {
               </div>
             </button>
             <button
-              className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2.5 text-center font-semibold text-sm transition-all duration-200 ${
                 activeTab === "people"
                   ? "text-purple-600 border-b-2 border-purple-600"
                   : "text-gray-500"
@@ -410,7 +410,7 @@ const Message = ({ user }) => {
               </div>
             </button>
             <button
-              className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
+              className={`flex-1 py-2.5 text-center font-semibold text-sm transition-all duration-200 ${
                 activeTab === "communities"
                   ? "text-purple-600 border-b-2 border-purple-600"
                   : "text-gray-500"

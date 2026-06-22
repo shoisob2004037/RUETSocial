@@ -127,45 +127,45 @@ const ChatList = ({ currentUser, onSelectChat, selectedChatId }) => {
       {chats.map((chat) => (
         <button
           key={chat.chatId}
-          className={`w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors ${
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 hover:bg-gray-50 transition-colors ${
             selectedChatId === chat.participant._id ? "bg-blue-50" : ""
           }`}
           onClick={() => handleSelectChat(chat)}
         >
           <div className="relative flex-shrink-0">
             <img
-              src={chat.participant.profilePicture || "https://via.placeholder.com/48"}
+              src={chat.participant.profilePicture || "https://via.placeholder.com/40"}
               alt={`${chat.participant.firstname} ${chat.participant.lastname}`}
-              className="w-12 h-12 rounded-full object-cover"
+              className="w-10 h-10 rounded-full object-cover"
             />
             {onlineUsers.has(chat.participant._id) && (
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
+              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
             )}
           </div>
           <div className="flex-1 min-w-0 text-left">
-            <div className="flex justify-between items-baseline">
-              <h4 className={`text-sm ${chat.unreadCount > 0 ? "font-semibold text-gray-900" : "font-medium text-gray-700"} truncate`}>
+            <div className="flex justify-between items-baseline gap-2">
+              <h4 className={`text-[13px] leading-tight ${chat.unreadCount > 0 ? "font-semibold text-gray-900" : "font-medium text-gray-700"} truncate`}>
                 {`${chat.participant.firstname} ${chat.participant.lastname}`}
               </h4>
-              <span className="text-xs text-gray-400 flex-shrink-0 ml-2">
+              <span className="text-[10px] text-gray-400 flex-shrink-0">
                 {new Date(chat.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
               </span>
             </div>
-            <div className="flex justify-between items-center mt-0.5">
-              <p className={`text-xs truncate ${
-                chat.unreadCount > 0 ? "text-gray-800 font-medium" : "text-gray-400"
+            <div className="flex justify-between items-center mt-0.5 gap-2">
+              <p className={`text-[11.5px] truncate ${
+                chat.unreadCount > 0 ? "text-gray-800 font-medium" : "text-gray-500"
               }`}>
                 {chat.lastMessage ? (
                   <>
                     {chat.lastMessage.sender === currentUser._id && "You: "}
-                    {chat.lastMessage.text?.length > 35 ? `${chat.lastMessage.text.substring(0, 35)}...` : chat.lastMessage.text}
+                    {chat.lastMessage.text?.length > 32 ? `${chat.lastMessage.text.substring(0, 32)}…` : chat.lastMessage.text}
                   </>
                 ) : (
                   <span className="italic">No messages</span>
                 )}
               </p>
               {chat.unreadCount > 0 && (
-                <span className="bg-blue-500 text-white text-xs rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center font-medium ml-2">
+                <span className="bg-blue-500 text-white text-[10px] rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center font-semibold">
                   {chat.unreadCount}
                 </span>
               )}

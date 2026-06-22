@@ -391,7 +391,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
     <div className="flex flex-col h-full min-h-0 overflow-hidden bg-white">
       {/* FIXED: Header - Fixed height to prevent layout shift */}
       <div className="flex-shrink-0 bg-white border-b border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center justify-between px-3 py-2.5">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <button
               onClick={onClose}
@@ -478,7 +478,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
       {/* FIXED: Scrollable Messages Area - Only this scrolls */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-4 py-4"
+        className="flex-1 min-h-0 overflow-y-auto bg-gray-50 px-3 py-3"
         style={{ scrollBehavior: "smooth" }}
       >
         {messages.length === 0 ? (
@@ -637,7 +637,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
       </div>
 
       {/* FIXED: Input Area - Always at bottom */}
-      <div className="flex-shrink-0 px-4 py-3 bg-white border-t border-gray-100">
+      <div className="flex-shrink-0 px-3 py-2 bg-white border-t border-gray-100" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowMediaUpload(true)}
