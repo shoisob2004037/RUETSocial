@@ -633,3 +633,129 @@ export const checkUploadHealth = async () => {
 }
 
 export default createAxiosInstance
+// ---------------- Events ----------------
+export const getEvents = async (params = {}) => {
+  try {
+    const api = createAxiosInstance();
+    const qs = new URLSearchParams(params).toString();
+    const res = await api.get(`/events${qs ? `?${qs}` : ""}`);
+    return res.data;
+  } catch (e) { console.error("getEvents:", e); throw e; }
+};
+
+export const createEvent = async (eventData) => {
+  try {
+    const api = createAxiosInstance();
+    const res = await api.post("/events", eventData);
+    return res.data;
+  } catch (e) { console.error("createEvent:", e); throw e; }
+};
+
+export const toggleAttendEvent = async (eventId, userId) => {
+  try {
+    const api = createAxiosInstance();
+    const res = await api.put(`/events/${eventId}/attend`, { userId });
+    return res.data;
+  } catch (e) { console.error("toggleAttendEvent:", e); throw e; }
+};
+
+export const deleteEvent = async (eventId, currentUserId, currentUserAdminStatus = false) => {
+  try {
+    const api = createAxiosInstance();
+    const res = await api.delete(`/events/${eventId}`, {
+      data: { currentUserId, currentUserAdminStatus },
+    });
+    return res.data;
+  } catch (e) { console.error("deleteEvent:", e); throw e; }
+};
+
+// ---------------- Jobs ----------------
+export const getJobs = async (params = {}) => {
+  const api = createAxiosInstance();
+  const qs = new URLSearchParams(params).toString();
+  const res = await api.get(`/jobs${qs ? `?${qs}` : ""}`);
+  return res.data;
+};
+export const createJob = async (data) => {
+  const api = createAxiosInstance();
+  const res = await api.post("/jobs", data);
+  return res.data;
+};
+export const applyJob = async (id, userId, name) => {
+  const api = createAxiosInstance();
+  const res = await api.put(`/jobs/${id}/apply`, { userId, name });
+  return res.data;
+};
+export const toggleSaveJob = async (id, userId) => {
+  const api = createAxiosInstance();
+  const res = await api.put(`/jobs/${id}/save`, { userId });
+  return res.data;
+};
+export const deleteJob = async (id, currentUserId, currentUserAdminStatus = false) => {
+  const api = createAxiosInstance();
+  const res = await api.delete(`/jobs/${id}`, { data: { currentUserId, currentUserAdminStatus } });
+  return res.data;
+};
+
+// ---------------- Polls ----------------
+export const getPolls = async (params = {}) => {
+  const api = createAxiosInstance();
+  const qs = new URLSearchParams(params).toString();
+  const res = await api.get(`/polls${qs ? `?${qs}` : ""}`);
+  return res.data;
+};
+export const createPoll = async (data) => {
+  const api = createAxiosInstance();
+  const res = await api.post("/polls", data);
+  return res.data;
+};
+export const votePoll = async (id, userId, optionIndex) => {
+  const api = createAxiosInstance();
+  const res = await api.put(`/polls/${id}/vote`, { userId, optionIndex });
+  return res.data;
+};
+export const deletePoll = async (id, currentUserId, currentUserAdminStatus = false) => {
+  const api = createAxiosInstance();
+  const res = await api.delete(`/polls/${id}`, { data: { currentUserId, currentUserAdminStatus } });
+  return res.data;
+};
+
+// ---------------- Communities ----------------
+export const getUserCommunities = async (userId) => {
+  const api = createAxiosInstance();
+  const res = await api.get(`/communities/user/${userId}`);
+  return res.data;
+};
+export const getCommunity = async (id) => {
+  const api = createAxiosInstance();
+  const res = await api.get(`/communities/${id}`);
+  return res.data;
+};
+export const createCommunity = async (payload) => {
+  const api = createAxiosInstance();
+  const res = await api.post("/communities", payload);
+  return res.data;
+};
+export const addCommunityMember = async (id, currentUserId, targetUserId) => {
+  const api = createAxiosInstance();
+  const res = await api.post(`/communities/${id}/members`, {
+    currentUserId,
+    targetUserId,
+  });
+  return res.data;
+};
+export const leaveCommunity = async (id, userId) => {
+  const api = createAxiosInstance();
+  const res = await api.post(`/communities/${id}/leave`, { userId });
+  return res.data;
+};
+export const sendCommunityMessage = async (id, payload) => {
+  const api = createAxiosInstance();
+  const res = await api.post(`/communities/${id}/messages`, payload);
+  return res.data;
+};
+export const getMutualFollowers = async (userId) => {
+  const api = createAxiosInstance();
+  const res = await api.get(`/communities/mutual/${userId}`);
+  return res.data;
+};

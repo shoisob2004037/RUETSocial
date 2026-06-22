@@ -10,21 +10,23 @@ import PostRoute from "./Routes/PostRoute.js"
 import UploadRoute from "./Routes/UploadRoute.js"
 import NotificationRoute from "./Routes/NotificationRoute.js"
 import ChatRoute from "./Routes/ChatRoute.js"
+import EventRoute from "./Routes/EventRoute.js"
+import JobRoute from "./Routes/JobRoute.js"
+import PollRoute from "./Routes/PollRoute.js"
+import CommunityRoute from "./Routes/CommunityRoute.js"
 import { setupSocketServer } from "./socket.js"
 
-// ✅ MUST be first before anything uses process.env
 dotenv.config()
 
 const app = express()
 const server = http.createServer(app)
 
-// ✅ Now process.env.FRONTEND_URL will actually work
 app.use(
   cors({
     origin: [
       process.env.FRONTEND_URL,
       "https://ruet-social.vercel.app",
-      "http://localhost:5173",
+      "http://localhost:5173"
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true,
@@ -55,6 +57,10 @@ app.use("/post", PostRoute)
 app.use("/upload", UploadRoute)
 app.use("/notifications", NotificationRoute)
 app.use("/chat", ChatRoute)
+app.use("/events", EventRoute)
+app.use("/jobs", JobRoute)
+app.use("/polls", PollRoute)
+app.use("/communities", CommunityRoute)
 
 app.use("/health", (req, res) => {
   res.status(200).send("OK")

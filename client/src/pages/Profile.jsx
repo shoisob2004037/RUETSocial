@@ -7,6 +7,7 @@ import Post from "../components/Post"
 import LoadingSpinner from "../components/LoadingSpinner"
 import EditProfile from "../components/EditProfile"
 import CreatePost from "../components/CreatePost"
+import PhotoLikeButton from "../components/PhotoLikeButton"
 
 const Profile = ({ user }) => {
   const { id } = useParams()
@@ -440,6 +441,8 @@ const Profile = ({ user }) => {
           >
             {/* Gradient Overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+            {/* Cover Photo Like */}
+            <PhotoLikeButton photoId={`${profileUser._id}-cover`} label="Like cover" />
           </div>
 
           {/* Profile Info Card */}
@@ -447,7 +450,7 @@ const Profile = ({ user }) => {
             <div className="p-6 sm:p-8">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
                 {/* Profile Picture */}
-                <div className="relative">
+                <div className="relative profile-photo-wrap">
                   <div className="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white">
                     <img
                       src={profileUser.profilePicture || "https://via.placeholder.com/150" || "/placeholder.svg"}
@@ -458,6 +461,10 @@ const Profile = ({ user }) => {
                   </div>
                   {/* Online Status Indicator */}
                   <div className="absolute bottom-1 right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white"></div>
+                  {/* Avatar Like */}
+                  <div style={{ position: "absolute", bottom: -10, left: "50%", transform: "translateX(-50%)" }}>
+                    <PhotoLikeButton photoId={`${profileUser._id}-avatar`} label="Like photo" />
+                  </div>
                 </div>
 
                 {/* User Info */}

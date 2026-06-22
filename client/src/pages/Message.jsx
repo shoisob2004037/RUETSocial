@@ -6,7 +6,8 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllUsers, getUser } from "../services/api";
 import ChatList from "../components/ChatList";
 import ChatComponent from "../components/ChatComponent";
-import { ChevronLeft, Search, Users, MessageCircle, X } from "lucide-react";
+import CommunitiesPanel from "../components/CommunitiesPanel";
+import { ChevronLeft, Search, Users, MessageCircle, X, Hash } from "lucide-react";
 
 const Message = ({ user }) => {
   const navigate = useNavigate();
@@ -175,6 +176,22 @@ const Message = ({ user }) => {
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600"></div>
               )}
             </button>
+            <button
+              className={`flex-1 py-3 text-center font-semibold transition-all duration-200 relative ${
+                activeTab === "communities"
+                  ? "text-purple-600"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+              onClick={() => setActiveTab("communities")}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Hash className="w-4 h-4" />
+                <span>Groups</span>
+              </div>
+              {activeTab === "communities" && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600"></div>
+              )}
+            </button>
           </div>
 
           {/* SCROLLABLE Content - Only this part scrolls */}
@@ -185,6 +202,9 @@ const Message = ({ user }) => {
                 onSelectChat={handleSelectUser}
                 selectedChatId={selectedUser?._id}
               />
+            )}
+            {activeTab === "communities" && (
+              <CommunitiesPanel currentUser={user.user} />
             )}
             {activeTab === "people" && (
               <div className="p-4">
@@ -389,6 +409,19 @@ const Message = ({ user }) => {
                 <span>People</span>
               </div>
             </button>
+            <button
+              className={`flex-1 py-4 text-center font-semibold transition-all duration-200 ${
+                activeTab === "communities"
+                  ? "text-purple-600 border-b-2 border-purple-600"
+                  : "text-gray-500"
+              }`}
+              onClick={() => setActiveTab("communities")}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <Hash className="w-5 h-5" />
+                <span>Groups</span>
+              </div>
+            </button>
           </div>
 
           {/* SCROLLABLE Content - Only this part scrolls */}
@@ -399,6 +432,9 @@ const Message = ({ user }) => {
                 onSelectChat={handleSelectUser}
                 selectedChatId={selectedUser?._id}
               />
+            )}
+            {activeTab === "communities" && (
+              <CommunitiesPanel currentUser={user.user} />
             )}
             {activeTab === "people" && (
               <div className="p-4">
