@@ -15,7 +15,7 @@ router.get("/:userId", getUserChats)
 router.get("/:userId/:recipientId", getChatHistory)
 router.post("/", sendMessage)
 router.put("/:chatId/:userId/read", markMessagesAsRead)
-router.delete("/:chatId/:userId", deleteChat)
+router.delete("/conversation/:chatId/:userId", deleteChat)
 router.put("/:chatId/:messageId/edit", editMessage)
 router.delete("/:chatId/:messageId", deleteMessage)
 

@@ -6,7 +6,7 @@ import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { getAllUsers, getUser } from "../services/api";
 import ChatList from "../components/ChatList";
 import ChatComponent from "../components/ChatComponent";
-import CommunitiesPanel from "../components/CommunitiesPanel";
+import CommunitiesPanel, { CommunityChat } from "../components/CommunitiesPanel";
 import { ChevronLeft, Search, Users, MessageCircle, X, Hash } from "lucide-react";
 
 const Message = ({ user }) => {
@@ -14,6 +14,7 @@ const Message = ({ user }) => {
   const { userId } = useParams();
   const location = useLocation();
   const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [followingUsers, setFollowingUsers] = useState([]);
@@ -108,6 +109,7 @@ const Message = ({ user }) => {
   const handleSelectUser = (selectedUser) => {
     if (!selectedUser || !selectedUser._id) return;
     setSelectedUser(selectedUser);
+    setSelectedCommunity(null);
     setSearchQuery("");
     setShowSearchResults(false);
     setActiveTab("chat");
@@ -117,8 +119,19 @@ const Message = ({ user }) => {
     navigate(`/message/${selectedUser._id}`, { replace: true });
   };
 
+  const handleSelectCommunity = (community) => {
+    if (!community || !community._id) return;
+    setSelectedCommunity(community);
+    setSelectedUser(null);
+    setActiveTab("communities");
+    if (isMobile) setShowChat(true);
+    navigate("/message", { replace: true });
+  };
+
   const handleBackToList = () => {
     setShowChat(false);
+    setSelectedUser(null);
+    setSelectedCommunity(null);
     navigate("/message", { replace: true });
   };
 
@@ -204,7 +217,11 @@ const Message = ({ user }) => {
               />
             )}
             {activeTab === "communities" && (
-              <CommunitiesPanel currentUser={user.user} />
+              <CommunitiesPanel
+                currentUser={user.user}
+                onSelectCommunity={handleSelectCommunity}
+                selectedCommunityId={selectedCommunity?._id}
+              />
             )}
             {activeTab === "people" && (
               <div className="p-4">
@@ -335,7 +352,14 @@ const Message = ({ user }) => {
 
         {/* Chat Area - Takes remaining space */}
         <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden h-full">
-          {selectedUser ? (
+          {selectedCommunity ? (
+            <CommunityChat
+              community={selectedCommunity}
+              currentUser={user.user}
+              onBack={() => setSelectedCommunity(null)}
+              onUpdated={() => setSelectedCommunity(null)}
+            />
+          ) : selectedUser ? (
             <ChatComponent
               currentUser={user.user}
               recipientUser={selectedUser}
@@ -434,7 +458,11 @@ const Message = ({ user }) => {
               />
             )}
             {activeTab === "communities" && (
-              <CommunitiesPanel currentUser={user.user} />
+              <CommunitiesPanel
+                currentUser={user.user}
+                onSelectCommunity={handleSelectCommunity}
+                selectedCommunityId={selectedCommunity?._id}
+              />
             )}
             {activeTab === "people" && (
               <div className="p-4">
@@ -554,11 +582,20 @@ const Message = ({ user }) => {
       ) : (
         // Chat View for Mobile - Full height with proper fixed headers
         <div className="h-full flex flex-col overflow-hidden">
-          <ChatComponent
-            currentUser={user.user}
-            recipientUser={selectedUser}
-            onClose={handleBackToList}
-          />
+          {selectedCommunity ? (
+            <CommunityChat
+              community={selectedCommunity}
+              currentUser={user.user}
+              onBack={handleBackToList}
+              onUpdated={handleBackToList}
+            />
+          ) : (
+            <ChatComponent
+              currentUser={user.user}
+              recipientUser={selectedUser}
+              onClose={handleBackToList}
+            />
+          )}
         </div>
       )}
     </div>

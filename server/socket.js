@@ -57,8 +57,8 @@ export const setupSocketServer = (server) => {
         const recipientSocketId = onlineUsers.get(recipientId);
 
         // Create a temporary message object for real-time delivery
-        const tempMessage = {
-          _id: Date.now().toString(), // Temporary ID for real-time
+        const tempMessage = data.message || {
+          _id: Date.now().toString(),
           sender: senderId,
           recipient: recipientId,
           text: text || "",
@@ -139,12 +139,21 @@ export const setupSocketServer = (server) => {
       }
     });
 
-    socket.on("edit_message", async ({ chatId, messageId, text, senderId }) => {
+    socket.on("edit_message", async ({ chatId, messageId, text, senderId, message: incomingMessage }) => {
       try {
+        if (incomingMessage) {
+          const chat = await ChatModel.findById(chatId);
+          const recipientId = chat?.participants.find((p) => p.toString() !== senderId.toString());
+          const recipientSocketId = onlineUsers.get(recipientId?.toString());
+          const payload = { chatId, messageId, text, message: incomingMessage };
+          if (recipientSocketId) io.to(recipientSocketId).emit("message_edited", payload);
+          return;
+        }
         const chat = await ChatModel.findById(chatId);
         const message = chat.messages.id(messageId);
-        if (message && message.sender === senderId) {
+        if (message && String(message.sender) === String(senderId) && !message.isDeleted) {
           message.text = text;
+          message.edited = true;
           await chat.save();
 
           const recipientId = chat.participants.find(
@@ -152,26 +161,38 @@ export const setupSocketServer = (server) => {
           );
           const recipientSocketId = onlineUsers.get(recipientId?.toString());
 
-          if (recipientSocketId) {
-            io.to(recipientSocketId).emit("message_edited", {
-              chatId,
-              messageId,
-              text,
-            });
-          }
-          socket.emit("message_edited", { chatId, messageId, text });
+          const payload = { chatId, messageId, text, message };
+          if (recipientSocketId) io.to(recipientSocketId).emit("message_edited", payload);
+          socket.emit("message_edited", payload);
         }
       } catch (error) {
         console.error("Error editing message in socket:", error);
       }
     });
 
-    socket.on("delete_message", async ({ chatId, messageId, senderId }) => {
+    socket.on("delete_message", async ({ chatId, messageId, senderId, message: incomingMessage, deletedByName }) => {
       try {
+        if (incomingMessage) {
+          const chat = await ChatModel.findById(chatId);
+          const recipientId = chat?.participants.find((p) => p.toString() !== senderId.toString());
+          const recipientSocketId = onlineUsers.get(recipientId?.toString());
+          const payload = { chatId, messageId, message: incomingMessage };
+          if (recipientSocketId) io.to(recipientSocketId).emit("message_deleted", payload);
+          return;
+        }
         const chat = await ChatModel.findById(chatId);
         const message = chat.messages.id(messageId);
-        if (message && message.sender === senderId) {
-          chat.messages.pull(messageId);
+        if (message && String(message.sender) === String(senderId)) {
+          message.text = "";
+          message.mediaUrl = null;
+          message.mediaType = null;
+          message.mediaPublicId = null;
+          message.mediaThumbnail = null;
+          message.messageType = "text";
+          message.isDeleted = true;
+          message.deletedBy = senderId;
+          message.deletedByName = deletedByName || "Someone";
+          message.deletedAt = new Date();
           await chat.save();
 
           const recipientId = chat.participants.find(
@@ -179,13 +200,9 @@ export const setupSocketServer = (server) => {
           );
           const recipientSocketId = onlineUsers.get(recipientId?.toString());
 
-          if (recipientSocketId) {
-            io.to(recipientSocketId).emit("message_deleted", {
-              chatId,
-              messageId,
-            });
-          }
-          socket.emit("message_deleted", { chatId, messageId });
+          const payload = { chatId, messageId, message };
+          if (recipientSocketId) io.to(recipientSocketId).emit("message_deleted", payload);
+          socket.emit("message_deleted", payload);
         }
       } catch (error) {
         console.error("Error deleting message in socket:", error);
@@ -209,6 +226,25 @@ export const setupSocketServer = (server) => {
       // appended optimistically via REST response).
       socket.to(`community:${communityId}`).emit("community_message", {
         communityId,
+        message,
+      });
+    });
+
+    socket.on("community_message_edited", ({ communityId, messageId, text, message }) => {
+      if (!communityId || !messageId) return;
+      socket.to(`community:${communityId}`).emit("community_message_edited", {
+        communityId,
+        messageId,
+        text,
+        message,
+      });
+    });
+
+    socket.on("community_message_deleted", ({ communityId, messageId, message }) => {
+      if (!communityId || !messageId) return;
+      socket.to(`community:${communityId}`).emit("community_message_deleted", {
+        communityId,
+        messageId,
         message,
       });
     });

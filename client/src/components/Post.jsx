@@ -27,6 +27,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import EditPost from "./EditPost";
 import DeleteConfirmation from "./DeleteConfirmation";
+import MediaViewer from "./MediaViewer";
 
 const Post = ({
   post,
@@ -55,6 +56,7 @@ const Post = ({
   const [editedCommentContent, setEditedCommentContent] = useState("");
   const [showPostOptions, setShowPostOptions] = useState(false);
   const [likeBurst, setLikeBurst] = useState(false);
+  const [viewerMedia, setViewerMedia] = useState(null);
 
   const isOwnPost = (post.user?._id || post.userId) === currentUser._id;
 
@@ -178,10 +180,10 @@ const Post = ({
 
   return (
     <>
-      <article className="post-card-modern bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow mb-5 overflow-hidden">
+      <article className="post-card-modern bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow mb-3 sm:mb-5 overflow-hidden">
         {/* Shared indicator */}
         {isShared && sharedBy && (
-          <div className="px-4 sm:px-5 py-2 bg-purple-50 border-b border-purple-100 flex items-center text-xs sm:text-sm">
+          <div className="px-3 sm:px-5 py-2 bg-purple-50 border-b border-purple-100 flex items-center text-xs sm:text-sm">
             <Bookmark className="w-4 h-4 mr-2 text-purple-500" />
             <Link
               to={`/profile/${sharedBy._id}`}
@@ -194,7 +196,7 @@ const Post = ({
         )}
 
         {/* Header */}
-        <header className="px-4 sm:px-5 pt-4 pb-3 flex items-center justify-between gap-3">
+        <header className="px-3 sm:px-5 pt-3 sm:pt-4 pb-2.5 sm:pb-3 flex items-center justify-between gap-3">
           <Link
             to={`/profile/${postUser._id}`}
             className="flex items-center gap-3 min-w-0 group no-underline"
@@ -258,7 +260,7 @@ const Post = ({
         </header>
 
         {/* Content */}
-        <div className="px-4 sm:px-5 pb-3">
+        <div className="px-3 sm:px-5 pb-2.5 sm:pb-3">
           {(customDescription || post.desc) && (
             <p className="text-gray-800 text-[15px] leading-relaxed whitespace-pre-wrap m-0">
               {customDescription || post.desc}
@@ -267,19 +269,26 @@ const Post = ({
         </div>
         {post.image && (
           <div className="bg-black/5">
-            <img
-              src={post.image}
-              alt="Post"
-              className="w-full max-h-[640px] object-cover"
+            <button
+              type="button"
+              onClick={() => setViewerMedia(post.image)}
+              className="block w-full cursor-zoom-in"
+              aria-label="View post photo full screen"
+            >
+              <img
+                src={post.image}
+                alt="Post"
+                className="w-full max-h-[520px] sm:max-h-[640px] object-cover"
               onError={(e) =>
                 (e.target.src = "https://via.placeholder.com/500")
               }
-            />
+              />
+            </button>
           </div>
         )}
 
         {/* Stats */}
-        <div className="px-4 sm:px-5 pt-3 pb-1 flex justify-between text-xs sm:text-sm text-gray-500">
+        <div className="px-3 sm:px-5 pt-3 pb-1 flex justify-between text-xs sm:text-sm text-gray-500">
           <button
             onClick={handleShowLikers}
             disabled={likesCount === 0}
@@ -297,7 +306,7 @@ const Post = ({
         </div>
 
         {/* Actions */}
-        <div className="mx-4 sm:mx-5 my-2 border-t border-gray-100 pt-1.5 grid grid-cols-3 gap-1">
+        <div className="mx-3 sm:mx-5 my-1.5 sm:my-2 border-t border-gray-100 pt-1.5 grid grid-cols-3 gap-1">
           <button
             onClick={handleLike}
             className={`relative flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-medium transition-all ${
@@ -346,7 +355,7 @@ const Post = ({
 
         {/* Comments */}
         {showComments && (
-          <div className="px-4 sm:px-5 py-3 border-t border-gray-100 bg-gray-50/60">
+          <div className="px-2.5 sm:px-5 py-2.5 sm:py-3 border-t border-gray-100 bg-gray-50/60">
             {loading ? (
               <p className="text-center text-gray-500 text-sm py-4">
                 Loading comments…
@@ -362,7 +371,7 @@ const Post = ({
                   const isOwnComment = comment.userId === currentUser._id;
                   const isPostOwner = post.userId === currentUser._id;
                   return (
-                    <div key={comment._id} className="flex gap-2.5">
+                    <div key={comment._id} className="flex gap-2 sm:gap-2.5">
                       <img
                         src={
                           cu?.profilePicture ||
@@ -372,8 +381,8 @@ const Post = ({
                         className="w-8 h-8 rounded-full object-cover shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <div className="bg-white px-3 py-2 rounded-2xl border border-gray-100">
-                          <div className="flex justify-between items-start gap-2 mb-0.5">
+                        <div className="bg-white px-2.5 sm:px-3 py-2 rounded-2xl border border-gray-100">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2 mb-0.5">
                             <Link
                               to={`/profile/${cu?._id}`}
                               className="text-gray-900 font-semibold text-xs hover:underline truncate"
@@ -407,28 +416,30 @@ const Post = ({
                             )}
                           </div>
                           {editingCommentId === comment._id ? (
-                            <div className="flex gap-2 mt-1">
+                            <div className="mt-1 space-y-2">
                               <input
                                 value={editedCommentContent}
                                 onChange={(e) =>
                                   setEditedCommentContent(e.target.value)
                                 }
-                                className="flex-1 px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+                                className="w-full px-2.5 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
                               />
-                              <button
-                                onClick={() =>
-                                  handleSaveEditComment(comment._id)
-                                }
-                                className="px-3 py-1 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600"
-                              >
-                                Save
-                              </button>
-                              <button
-                                onClick={() => setEditingCommentId(null)}
-                                className="px-3 py-1 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300"
-                              >
-                                Cancel
-                              </button>
+                              <div className="flex justify-end gap-2 flex-wrap">
+                                <button
+                                  onClick={() =>
+                                    handleSaveEditComment(comment._id)
+                                  }
+                                  className="px-3 py-1.5 bg-blue-500 text-white text-xs rounded-lg hover:bg-blue-600"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  onClick={() => setEditingCommentId(null)}
+                                  className="px-3 py-1.5 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <p className="text-gray-800 text-sm leading-snug m-0 break-words">
@@ -544,6 +555,16 @@ const Post = ({
             )}
           </div>
         </div>
+      )}
+
+      {viewerMedia && (
+        <MediaViewer
+          media={viewerMedia}
+          mediaType="image"
+          allMedia={[{ url: viewerMedia, type: "image", _id: post._id }]}
+          currentIndex={0}
+          onClose={() => setViewerMedia(null)}
+        />
       )}
     </>
   );

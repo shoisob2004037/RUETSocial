@@ -8,6 +8,11 @@ const communityMessageSchema = mongoose.Schema(
     text: { type: String, default: "" },
     mediaUrl: { type: String, default: null },
     mediaType: { type: String, enum: ["image", "video", null], default: null },
+    edited: { type: Boolean, default: false },
+    isDeleted: { type: Boolean, default: false },
+    deletedBy: { type: String, default: null },
+    deletedByName: { type: String, default: "" },
+    deletedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

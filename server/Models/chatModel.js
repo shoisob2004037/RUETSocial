@@ -40,6 +40,26 @@ const messageSchema = mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    edited: {
+      type: Boolean,
+      default: false,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+    deletedBy: {
+      type: String,
+      default: null,
+    },
+    deletedByName: {
+      type: String,
+      default: "",
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,

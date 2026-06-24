@@ -492,14 +492,17 @@ export const sendMessage = async (senderId, recipientId, text, mediaData = null,
     const response = await api.post("/chat", body)
 
     // 🔥 normalize message (IMPORTANT)
-    const msg = response.data.message || response.data
+    const msg = response.data.messageData || response.data.message || response.data
+
+    const normalized = {
+      ...msg,
+      mediaUrl: getFullMediaUrl(msg.mediaUrl)
+    }
 
     return {
       ...response.data,
-      message: {
-        ...msg,
-        mediaUrl: getFullMediaUrl(msg.mediaUrl)
-      }
+      message: normalized,
+      messageData: normalized,
     }
 
   } catch (error) {
@@ -524,7 +527,7 @@ export const markMessagesAsRead = async (chatId, userId) => {
 export const deleteChat = async (chatId, userId) => {
   try {
     const api = createAxiosInstance()
-    const response = await api.delete(`/chat/${chatId}/${userId}`)
+    const response = await api.delete(`/chat/conversation/${chatId}/${userId}`)
     return response.data
   } catch (error) {
     console.error("Error deleting chat:", error.response?.data || error.message)
@@ -545,10 +548,10 @@ export const editMessage = async (chatId, messageId, userId, text) => {
 }
 
 // Delete a single message
-export const deleteMessage = async (chatId, messageId, userId) => {
+export const deleteMessage = async (chatId, messageId, userId, deletedByName = "") => {
   try {
     const api = createAxiosInstance()
-    const response = await api.delete(`/chat/${chatId}/${messageId}`, { data: { userId } })
+    const response = await api.delete(`/chat/${chatId}/${messageId}`, { data: { userId, deletedByName } })
     return response.data
   } catch (error) {
     console.error("Error deleting message:", error.response?.data || error.message)
@@ -752,6 +755,16 @@ export const leaveCommunity = async (id, userId) => {
 export const sendCommunityMessage = async (id, payload) => {
   const api = createAxiosInstance();
   const res = await api.post(`/communities/${id}/messages`, payload);
+  return res.data;
+};
+export const editCommunityMessage = async (id, messageId, payload) => {
+  const api = createAxiosInstance();
+  const res = await api.put(`/communities/${id}/messages/${messageId}`, payload);
+  return res.data;
+};
+export const deleteCommunityMessage = async (id, messageId, payload) => {
+  const api = createAxiosInstance();
+  const res = await api.delete(`/communities/${id}/messages/${messageId}`, { data: payload });
   return res.data;
 };
 export const getMutualFollowers = async (userId) => {

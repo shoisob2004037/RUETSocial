@@ -204,6 +204,72 @@ export const sendCommunityMessage = async (req, res) => {
   }
 };
 
+export const editCommunityMessage = async (req, res) => {
+  try {
+    const { id, messageId } = req.params;
+    const { senderId, text } = req.body;
+    if (!senderId || !text?.trim()) {
+      return res.status(400).json({ message: "Sender and text are required" });
+    }
+
+    const community = await CommunityModel.findById(id);
+    if (!community) return res.status(404).json({ message: "Not found" });
+    if (!community.members.map(String).includes(String(senderId))) {
+      return res.status(403).json({ message: "Not a member" });
+    }
+
+    const message = community.messages.id(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+    if (message.isDeleted) {
+      return res.status(400).json({ message: "Deleted messages cannot be edited" });
+    }
+    if (String(message.sender) !== String(senderId)) {
+      return res.status(403).json({ message: "You can edit only your own message" });
+    }
+
+    message.text = text.trim();
+    message.edited = true;
+    await community.save();
+    res.status(200).json({ message, community: { _id: community._id } });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const deleteCommunityMessage = async (req, res) => {
+  try {
+    const { id, messageId } = req.params;
+    const { senderId, deletedByName } = req.body;
+    if (!senderId) return res.status(400).json({ message: "Sender is required" });
+
+    const community = await CommunityModel.findById(id);
+    if (!community) return res.status(404).json({ message: "Not found" });
+    if (!community.members.map(String).includes(String(senderId))) {
+      return res.status(403).json({ message: "Not a member" });
+    }
+
+    const message = community.messages.id(messageId);
+    if (!message) return res.status(404).json({ message: "Message not found" });
+    if (String(message.sender) !== String(senderId)) {
+      return res.status(403).json({ message: "You can delete only your own message" });
+    }
+
+    message.text = "";
+    message.mediaUrl = null;
+    message.mediaType = null;
+    message.isDeleted = true;
+    message.deletedBy = senderId;
+    message.deletedByName = deletedByName || "Someone";
+    message.deletedAt = new Date();
+    await community.save();
+    res.status(200).json({ message, community: { _id: community._id } });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 // Get mutual followers for a given user (helper for the "add member" picker)
 export const getMutualFollowers = async (req, res) => {
   try {

@@ -10,9 +10,13 @@ import {
   addCommunityMember,
   removeCommunityMember,
   sendCommunityMessage,
+  editCommunityMessage,
+  deleteCommunityMessage,
   getMutualFollowers,
   leaveCommunity,
 } from "../services/api";
+import MediaUpload from "./MediaUpload";
+import MediaViewer from "./MediaViewer";
 import {
   Users,
   Plus,
@@ -26,6 +30,11 @@ import {
   Shield,
   Trash2,
   Info,
+  Paperclip,
+  MoreVertical,
+  Edit2,
+  Image as ImageIcon,
+  PlayCircle,
 } from "lucide-react";
 
 const formatTime = (d) => {
@@ -177,12 +186,15 @@ const CreateCommunityModal = ({ currentUser, onClose, onCreated }) => {
 };
 
 /* ─────────────────── Members Modal (with admin controls) ─────────────────── */
-const MembersModal = ({ community, currentUser, onClose, onChanged }) => {
+const MembersModal = ({ community, currentUser, allMedia = [], onClose, onChanged }) => {
   const [members, setMembers] = useState([]);
   const [mutuals, setMutuals] = useState([]);
   const [tab, setTab] = useState("members");
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(null);
+  const [viewerMedia, setViewerMedia] = useState(null);
+  const [viewerMediaType, setViewerMediaType] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
   const amAdmin = useMemo(
     () =>
@@ -247,7 +259,16 @@ const MembersModal = ({ community, currentUser, onClose, onChanged }) => {
     `${u.firstname} ${u.lastname}`.toLowerCase().includes(q.toLowerCase())
   );
 
+  const openMediaViewer = (media, index) => {
+    setViewerMedia(media.url);
+    setViewerMediaType(media.type);
+    setCurrentMediaIndex(index);
+  };
+
+  const isVideo = (type) => type?.includes("video");
+
   return (
+    <>
     <div className="fixed inset-0 z-[60] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-3">
       <div className="bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between p-4 border-b">
@@ -275,9 +296,15 @@ const MembersModal = ({ community, currentUser, onClose, onChanged }) => {
               Add People
             </button>
           )}
+          <button
+            onClick={() => setTab("media")}
+            className={`flex-1 py-2.5 ${tab === "media" ? "text-purple-600 border-b-2 border-purple-600" : "text-gray-500"}`}
+          >
+            Media
+          </button>
         </div>
 
-        <div className="p-3 border-b">
+        {tab !== "media" && <div className="p-3 border-b">
           <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-xl border border-gray-200">
             <Search size={14} className="text-gray-400" />
             <input
@@ -287,7 +314,7 @@ const MembersModal = ({ community, currentUser, onClose, onChanged }) => {
               className="flex-1 bg-transparent outline-none text-sm"
             />
           </div>
-        </div>
+        </div>}
 
         <div className="flex-1 overflow-y-auto">
           {tab === "members" ? (
@@ -334,7 +361,7 @@ const MembersModal = ({ community, currentUser, onClose, onChanged }) => {
                 </div>
               ))
             )
-          ) : filteredAddable.length === 0 ? (
+          ) : tab === "add" ? (filteredAddable.length === 0 ? (
             <p className="text-center text-gray-400 text-sm py-8 m-0">
               No mutual followers available to add.
             </p>
@@ -367,23 +394,77 @@ const MembersModal = ({ community, currentUser, onClose, onChanged }) => {
                 </button>
               </div>
             ))
+          )) : allMedia.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className="w-14 h-14 rounded-full bg-purple-50 flex items-center justify-center mb-3">
+                <ImageIcon className="w-7 h-7 text-purple-500" />
+              </div>
+              <p className="text-gray-600 text-sm font-medium m-0">No media shared yet</p>
+              <p className="text-gray-400 text-xs mt-1 m-0">Photos and videos sent in this group will appear here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 p-3">
+              {allMedia.map((media, index) => (
+                <button
+                  key={media._id || media.url || index}
+                  onClick={() => openMediaViewer(media, index)}
+                  className="relative aspect-square overflow-hidden rounded-xl bg-gray-100"
+                >
+                  {isVideo(media.type) ? (
+                    <>
+                      <video src={media.url} className="w-full h-full object-cover" muted />
+                      <span className="absolute inset-0 grid place-items-center bg-black/25 text-white">
+                        <PlayCircle size={26} />
+                      </span>
+                    </>
+                  ) : (
+                    <img src={media.url} alt="Group media" className="w-full h-full object-cover" />
+                  )}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </div>
     </div>
+    {viewerMedia && (
+      <MediaViewer
+        media={viewerMedia}
+        mediaType={viewerMediaType}
+        allMedia={allMedia}
+        currentIndex={currentMediaIndex}
+        onClose={() => setViewerMedia(null)}
+      />
+    )}
+    </>
   );
 };
 
 /* ─────────────────── Community Chat (real-time) ─────────────────── */
-const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
+export const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
   const [c, setC] = useState(community);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [showMembers, setShowMembers] = useState(false);
+  const [showMediaUpload, setShowMediaUpload] = useState(false);
+  const [viewerMedia, setViewerMedia] = useState(null);
+  const [viewerMediaType, setViewerMediaType] = useState(null);
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editedMessageText, setEditedMessageText] = useState("");
+  const [activeMessageMenu, setActiveMessageMenu] = useState(null);
   const [typingUsers, setTypingUsers] = useState({}); // id -> name
   const endRef = useRef(null);
   const socketRef = useRef(null);
   const typingTimerRef = useRef(null);
+
+  const allMedia = useMemo(
+    () =>
+      (c.messages || [])
+        .filter((m) => m.mediaUrl && !m.isDeleted)
+        .map((m) => ({ url: m.mediaUrl, type: m.mediaType, _id: m._id })),
+    [c.messages]
+  );
 
   // Fetch fresh
   useEffect(() => {
@@ -410,7 +491,29 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
       if (communityId !== community._id) return;
       setC((prev) => ({
         ...prev,
-        messages: [...(prev.messages || []), message],
+        messages: (prev.messages || []).some((m) => String(m._id) === String(message._id))
+          ? prev.messages
+          : [...(prev.messages || []), message],
+      }));
+    });
+    s.on("community_message_edited", ({ communityId, messageId, text, message }) => {
+      if (communityId !== community._id) return;
+      setC((prev) => ({
+        ...prev,
+        messages: (prev.messages || []).map((m) =>
+          String(m._id) === String(messageId) ? { ...m, ...(message || {}), text, edited: true } : m
+        ),
+      }));
+    });
+    s.on("community_message_deleted", ({ communityId, messageId, message }) => {
+      if (communityId !== community._id) return;
+      setC((prev) => ({
+        ...prev,
+        messages: (prev.messages || []).map((m) =>
+          String(m._id) === String(messageId)
+            ? { ...m, ...(message || {}), text: "", mediaUrl: null, mediaType: null, isDeleted: true }
+            : m
+        ),
       }));
     });
     s.on("community_typing", ({ communityId, userId, userName }) => {
@@ -434,6 +537,12 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
     });
     return () => {
       s.emit("leave_community", community._id);
+      s.off("community_message");
+      s.off("community_message_edited");
+      s.off("community_message_deleted");
+      s.off("community_typing");
+      s.off("community_stop_typing");
+      s.off("community_members_changed");
       s.disconnect();
     };
   }, [community._id, currentUser._id]);
@@ -490,6 +599,118 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
     } finally {
       setSending(false);
     }
+  };
+
+  const sendMedia = async (media) => {
+    setSending(true);
+    try {
+      const res = await sendCommunityMessage(community._id, {
+        senderId: currentUser._id,
+        senderName: `${currentUser.firstname} ${currentUser.lastname || ""}`.trim(),
+        senderAvatar: currentUser.profilePicture || "",
+        text: "",
+        mediaUrl: media.url,
+        mediaType: media.type,
+      });
+      const msg = res?.message;
+      if (msg) {
+        setC((prev) => ({ ...prev, messages: [...(prev.messages || []), msg] }));
+        socketRef.current?.emit("community_message", { communityId: community._id, message: msg });
+      }
+    } catch {
+      alert("Failed to send media.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const saveEditedMessage = async () => {
+    if (!editingMessageId || !editedMessageText.trim()) return;
+    try {
+      const res = await editCommunityMessage(community._id, editingMessageId, {
+        senderId: currentUser._id,
+        text: editedMessageText,
+      });
+      const msg = res?.message;
+      setC((prev) => ({
+        ...prev,
+        messages: (prev.messages || []).map((m) =>
+          String(m._id) === String(editingMessageId)
+            ? { ...m, ...(msg || {}), text: editedMessageText, edited: true }
+            : m
+        ),
+      }));
+      socketRef.current?.emit("community_message_edited", {
+        communityId: community._id,
+        messageId: editingMessageId,
+        text: editedMessageText,
+        message: msg,
+      });
+      setEditingMessageId(null);
+      setEditedMessageText("");
+    } catch (e) {
+      alert(e?.response?.data?.message || "Could not edit message");
+    }
+  };
+
+  const deleteGroupMessage = async (messageId) => {
+    try {
+      const deletedByName = `${currentUser.firstname} ${currentUser.lastname || ""}`.trim();
+      const res = await deleteCommunityMessage(community._id, messageId, {
+        senderId: currentUser._id,
+        deletedByName,
+      });
+      const msg = res?.message;
+      setC((prev) => ({
+        ...prev,
+        messages: (prev.messages || []).map((m) =>
+          String(m._id) === String(messageId)
+            ? { ...m, ...(msg || {}), text: "", mediaUrl: null, mediaType: null, isDeleted: true, deletedByName }
+            : m
+        ),
+      }));
+      socketRef.current?.emit("community_message_deleted", {
+        communityId: community._id,
+        messageId,
+        message: msg,
+      });
+      setActiveMessageMenu(null);
+    } catch (e) {
+      alert(e?.response?.data?.message || "Could not delete message");
+    }
+  };
+
+  const startEditMessage = (message) => {
+    setEditingMessageId(message._id);
+    setEditedMessageText(message.text || "");
+    setActiveMessageMenu(null);
+  };
+
+  const openMediaViewer = (mediaUrl, mediaType) => {
+    const index = allMedia.findIndex((m) => m.url === mediaUrl);
+    setViewerMedia(mediaUrl);
+    setViewerMediaType(mediaType);
+    setCurrentMediaIndex(Math.max(index, 0));
+  };
+
+  const renderCommunityMessage = (m) => {
+    if (m.isDeleted) {
+      return <p className="m-0 text-xs italic opacity-80">{m.deletedByName || "Someone"} deleted a message</p>;
+    }
+    if (m.mediaUrl) {
+      if (m.mediaType === "video") {
+        return <video src={m.mediaUrl} controls className="max-w-[210px] sm:max-w-[300px] max-h-52 rounded-xl" />;
+      }
+      return (
+        <img
+          src={m.mediaUrl}
+          alt="Shared media"
+          onClick={() => openMediaViewer(m.mediaUrl, m.mediaType)}
+          className="max-w-[210px] sm:max-w-[300px] max-h-56 rounded-xl object-cover cursor-pointer"
+        />
+      );
+    }
+    return <p className="m-0 break-words whitespace-pre-wrap leading-snug">{m.text}</p>;
   };
 
   const leave = async () => {
@@ -566,34 +787,80 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
                     className="w-7 h-7 rounded-full object-cover shrink-0 mt-1"
                   />
                 )}
-                <div
-                  className={`max-w-[78%] px-3 py-1.5 rounded-2xl shadow-sm text-sm ${
-                    mine
-                      ? "text-white rounded-br-md"
-                      : "bg-white text-gray-800 border border-gray-100 rounded-bl-md"
-                  }`}
-                  style={
-                    mine
-                      ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }
-                      : {}
-                  }
-                >
-                  {!mine && (
-                    <p className="m-0 text-[11px] font-semibold text-purple-600 mb-0.5">
-                      {m.senderName}
-                    </p>
-                  )}
-                  <p className="m-0 break-words whitespace-pre-wrap leading-snug">
-                    {m.text}
-                  </p>
-                  <p
-                    className={`m-0 text-[10px] mt-0.5 text-right ${
-                      mine ? "text-white/70" : "text-gray-400"
-                    }`}
-                  >
-                    {formatTime(m.createdAt)}
-                  </p>
-                </div>
+                {editingMessageId === m._id ? (
+                  <div className="w-[min(92vw,28rem)] bg-white rounded-2xl border border-gray-100 shadow-sm p-2.5">
+                    <input
+                      value={editedMessageText}
+                      onChange={(e) => setEditedMessageText(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && saveEditedMessage()}
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 outline-none focus:ring-2 focus:ring-purple-200 text-sm"
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2 mt-2 flex-wrap">
+                      <button onClick={() => setEditingMessageId(null)} className="px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-semibold">
+                        Cancel
+                      </button>
+                      <button onClick={saveEditedMessage} className="px-3 py-1.5 rounded-lg bg-purple-600 text-white text-xs font-semibold">
+                        Save
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative group max-w-[82vw] sm:max-w-md">
+                    <div
+                      className={`px-3 py-1.5 rounded-2xl shadow-sm text-sm ${
+                        m.isDeleted
+                          ? "bg-gray-200 text-gray-600"
+                          : mine
+                            ? "text-white rounded-br-md"
+                            : "bg-white text-gray-800 border border-gray-100 rounded-bl-md"
+                      }`}
+                      style={
+                        mine && !m.isDeleted
+                          ? { background: "linear-gradient(135deg,#7c3aed,#4f46e5)" }
+                          : {}
+                      }
+                    >
+                      {!mine && !m.isDeleted && (
+                        <p className="m-0 text-[11px] font-semibold text-purple-600 mb-0.5">
+                          {m.senderName}
+                        </p>
+                      )}
+                      {renderCommunityMessage(m)}
+                      <div
+                        className={`m-0 text-[10px] mt-0.5 flex justify-end items-center gap-1 ${
+                          mine && !m.isDeleted ? "text-white/70" : "text-gray-400"
+                        }`}
+                      >
+                        {m.edited && !m.isDeleted && <span>edited</span>}
+                        <span>{formatTime(m.createdAt)}</span>
+                        {mine && !m.isDeleted && (
+                          <span className="relative">
+                            <button
+                              onClick={() => setActiveMessageMenu(activeMessageMenu === m._id ? null : m._id)}
+                              className="p-0.5 rounded-full hover:bg-white/15"
+                              aria-label="Message options"
+                            >
+                              <MoreVertical size={13} />
+                            </button>
+                            {activeMessageMenu === m._id && (
+                              <span className="absolute right-0 bottom-full mb-1 w-24 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden z-20 text-left">
+                                {m.text && (
+                                  <button onClick={() => startEditMessage(m)} className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-blue-600 hover:bg-gray-50">
+                                    <Edit2 size={12} /> Edit
+                                  </button>
+                                )}
+                                <button onClick={() => deleteGroupMessage(m._id)} className="flex items-center gap-1.5 w-full px-3 py-1.5 text-xs text-red-600 hover:bg-red-50">
+                                  <Trash2 size={12} /> Delete
+                                </button>
+                              </span>
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })
@@ -616,9 +883,17 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
       {/* Composer */}
       <form
         onSubmit={send}
-        className="flex-shrink-0 flex items-center gap-2 px-3 py-2.5 border-t border-gray-100 bg-white"
+        className="flex-shrink-0 flex items-center gap-2 px-2 sm:px-3 py-2.5 border-t border-gray-100 bg-white"
         style={{ paddingBottom: "max(0.625rem, env(safe-area-inset-bottom))" }}
       >
+        <button
+          type="button"
+          onClick={() => setShowMediaUpload(true)}
+          className="w-10 h-10 rounded-full inline-flex items-center justify-center text-gray-500 hover:bg-gray-100 hover:text-purple-600 shrink-0"
+          title="Attach image or video"
+        >
+          <Paperclip size={18} />
+        </button>
         <input
           value={text}
           onChange={(e) => {
@@ -642,6 +917,7 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
         <MembersModal
           community={c}
           currentUser={currentUser}
+          allMedia={allMedia}
           onClose={() => setShowMembers(false)}
           onChanged={async () => {
             try {
@@ -654,12 +930,29 @@ const CommunityChat = ({ community, currentUser, onBack, onUpdated }) => {
           }}
         />
       )}
+      {showMediaUpload && (
+        <MediaUpload
+          currentUser={currentUser}
+          recipientUser={{ _id: community._id }}
+          onMediaUpload={sendMedia}
+          onClose={() => setShowMediaUpload(false)}
+        />
+      )}
+      {viewerMedia && (
+        <MediaViewer
+          media={viewerMedia}
+          mediaType={viewerMediaType}
+          allMedia={allMedia}
+          currentIndex={currentMediaIndex}
+          onClose={() => setViewerMedia(null)}
+        />
+      )}
     </div>
   );
 };
 
 /* ─────────────────── Communities List Panel ─────────────────── */
-const CommunitiesPanel = ({ currentUser }) => {
+const CommunitiesPanel = ({ currentUser, onSelectCommunity, selectedCommunityId }) => {
   const [list, setList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -726,8 +1019,10 @@ const CommunitiesPanel = ({ currentUser }) => {
             {list.map((c) => (
               <li key={c._id}>
                 <button
-                  onClick={() => setActive(c)}
-                  className="w-full flex items-center gap-3 p-3 hover:bg-purple-50 text-left"
+                  onClick={() => (onSelectCommunity ? onSelectCommunity(c) : setActive(c))}
+                  className={`w-full flex items-center gap-3 p-3 text-left transition-colors ${
+                    selectedCommunityId === c._id ? "bg-purple-50" : "hover:bg-purple-50"
+                  }`}
                 >
                   <div
                     className="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"

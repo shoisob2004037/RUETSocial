@@ -110,6 +110,14 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
         return [...prev, newMessage];
       });
 
+      if (newMessage?.mediaUrl) {
+        setAllMedia((prev) =>
+          prev.some((media) => media._id === newMessage._id || media.url === newMessage.mediaUrl)
+            ? prev
+            : [...prev, { url: newMessage.mediaUrl, type: newMessage.mediaType, _id: newMessage._id }],
+        );
+      }
+
       if (chatId) {
         socket.emit("mark_read", { chatId, userId: currentUser._id });
       }
@@ -137,13 +145,27 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
     socket.on("message_edited", (data) => {
       setMessages((prev) =>
         prev.map((msg) =>
-          msg._id === data.messageId ? { ...msg, text: data.text } : msg,
+          msg._id === data.messageId ? { ...msg, ...(data.message || {}), text: data.text, edited: true } : msg,
         ),
       );
     });
 
     socket.on("message_deleted", (data) => {
-      setMessages((prev) => prev.filter((msg) => msg._id !== data.messageId));
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === data.messageId
+            ? {
+                ...msg,
+                ...(data.message || {}),
+                text: "",
+                mediaUrl: null,
+                mediaType: null,
+                isDeleted: true,
+                deletedByName: data.message?.deletedByName || "Someone",
+              }
+            : msg,
+        ),
+      );
       setAllMedia((prev) =>
         prev.filter((media) => media._id !== data.messageId),
       );
@@ -285,17 +307,25 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
 
   const handleSaveEditedMessage = async () => {
     if (!editedMessageText.trim() || !chatId || !editingMessageId) return;
-    await editMessage(
+    const response = await editMessage(
       chatId,
       editingMessageId,
       currentUser._id,
       editedMessageText,
+    );
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg._id === editingMessageId
+          ? { ...msg, ...(response.messageData || {}), text: editedMessageText, edited: true }
+          : msg,
+      ),
     );
     socket?.emit("edit_message", {
       chatId,
       messageId: editingMessageId,
       text: editedMessageText,
       senderId: currentUser._id,
+      message: response.messageData,
     });
     setEditingMessageId(null);
     setEditedMessageText("");
@@ -309,11 +339,29 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
   const handleDeleteMessage = async (messageId) => {
     if (!chatId) return;
     try {
-      await deleteMessage(chatId, messageId, currentUser._id);
+      const deletedByName = `${currentUser.firstname} ${currentUser.lastname || ""}`.trim();
+      const response = await deleteMessage(chatId, messageId, currentUser._id, deletedByName);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg._id === messageId
+            ? {
+                ...msg,
+                ...(response.messageData || {}),
+                text: "",
+                mediaUrl: null,
+                mediaType: null,
+                isDeleted: true,
+                deletedByName,
+              }
+            : msg,
+        ),
+      );
+      setAllMedia((prev) => prev.filter((media) => media._id !== messageId));
       socket?.emit("delete_message", {
         chatId,
         messageId,
         senderId: currentUser._id,
+        message: response.messageData,
       });
       setActiveDropdown(null);
     } catch (error) {
@@ -344,6 +392,14 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
   };
 
   const renderMessageContent = (message) => {
+    if (message.isDeleted) {
+      return (
+        <p className="m-0 text-xs italic opacity-80">
+          {message.deletedByName || "Someone"} deleted a message
+        </p>
+      );
+    }
+
     if (message.mediaUrl) {
       const mediaIndex = allMedia.findIndex((m) => m.url === message.mediaUrl);
 
@@ -511,7 +567,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
                 className={`flex ${message.sender === currentUser._id ? "justify-end" : "justify-start"}`}
               >
                 {editingMessageId === message._id ? (
-                  <div className="bg-white rounded-lg shadow-sm p-3 max-w-[280px] sm:max-w-md">
+                  <div className="bg-white rounded-lg shadow-sm p-2.5 sm:p-3 w-[min(92vw,28rem)] sm:max-w-md">
                     <input
                       ref={editInputRef}
                       type="text"
@@ -522,7 +578,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
                       }
                       className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
-                    <div className="flex justify-end gap-2 mt-2">
+                    <div className="flex justify-end gap-2 mt-2 flex-wrap">
                       <button
                         onClick={handleCancelEdit}
                         className="px-3 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
@@ -538,10 +594,12 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="group relative max-w-[280px] sm:max-w-md">
+                  <div className="group relative max-w-[82vw] sm:max-w-md">
                     <div
                       className={`px-3 py-2 rounded-3xl ${
-                        message.sender === currentUser._id
+                        message.isDeleted
+                          ? "bg-gray-200 text-gray-600 rounded-2xl"
+                          : message.sender === currentUser._id
                           ? "bg-blue-500 text-white rounded-br-none"
                           : "bg-white text-gray-800 rounded-bl-none border border-gray-100"
                       }`}
@@ -560,7 +618,8 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
                             minute: "2-digit",
                           })}
                         </span>
-                        {message.sender === currentUser._id && (
+                        {message.edited && !message.isDeleted && <span>edited</span>}
+                        {message.sender === currentUser._id && !message.isDeleted && (
                           <>
                             <span>{message.read ? "✓✓" : "✓"}</span>
                             <div className="relative">
@@ -637,7 +696,7 @@ const ChatComponent = ({ currentUser, recipientUser, onClose }) => {
       </div>
 
       {/* FIXED: Input Area - Always at bottom */}
-      <div className="flex-shrink-0 px-3 py-2 bg-white border-t border-gray-100" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
+      <div className="flex-shrink-0 px-2 sm:px-3 py-2 bg-white border-t border-gray-100" style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowMediaUpload(true)}

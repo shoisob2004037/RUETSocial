@@ -114,9 +114,11 @@ export const editMessage = async (req, res) => {
     if (!chat) return res.status(404).json({ message: "Chat not found" });
     const message = chat.messages.id(messageId);
     if (!message) return res.status(404).json({ message: "Message not found" });
-    if (message.sender !== userId) return res.status(403).json({ message: "Unauthorized to edit this message" });
+    if (message.isDeleted) return res.status(400).json({ message: "Deleted messages cannot be edited" });
+    if (String(message.sender) !== String(userId)) return res.status(403).json({ message: "Unauthorized to edit this message" });
     if (!text?.trim()) return res.status(400).json({ message: "Message text is required" });
     message.text = text;
+    message.edited = true;
     await chat.save();
     res.status(200).json({ message: "Message edited successfully", messageData: message });
   } catch (error) {
@@ -127,16 +129,28 @@ export const editMessage = async (req, res) => {
 
 export const deleteMessage = async (req, res) => {
   const { chatId, messageId } = req.params;
-  const { userId } = req.body;
+  const { userId, deletedByName } = req.body;
   try {
     const chat = await ChatModel.findById(chatId);
     if (!chat) return res.status(404).json({ message: "Chat not found" });
+    if (!chat.participants.map(String).includes(String(userId))) {
+      return res.status(403).json({ message: "Unauthorized to delete this message" });
+    }
     const message = chat.messages.id(messageId);
     if (!message) return res.status(404).json({ message: "Message not found" });
-    if (message.sender !== userId) return res.status(403).json({ message: "Unauthorized to delete this message" });
-    chat.messages.pull(messageId);
+    if (String(message.sender) !== String(userId)) return res.status(403).json({ message: "Unauthorized to delete this message" });
+    message.text = "";
+    message.mediaUrl = null;
+    message.mediaType = null;
+    message.mediaPublicId = null;
+    message.mediaThumbnail = null;
+    message.messageType = "text";
+    message.isDeleted = true;
+    message.deletedBy = userId;
+    message.deletedByName = deletedByName || "Someone";
+    message.deletedAt = new Date();
     await chat.save();
-    res.status(200).json({ message: "Message deleted successfully", messageId });
+    res.status(200).json({ message: "Message deleted successfully", messageId, messageData: message });
   } catch (error) {
     console.error("Error deleting message:", error);
     res.status(500).json({ message: "Server error while deleting message" });
